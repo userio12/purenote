@@ -60,6 +60,12 @@ dependencies:
   # Crash reporting
   sentry_flutter: ^9.0.0
 
+  # Cryptography
+  pointycastle: ^3.9.1
+
+  # Timezone for notification scheduling
+  timezone: ^0.10.1
+
   # Import parsing
   xml: ^6.5.0
   archive: ^4.0.9

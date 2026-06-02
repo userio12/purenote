@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:encrypt/encrypt.dart' as enc;
+import 'package:pointycastle/export.dart';
 
 class EncryptionService {
   static enc.IV _generateIV() {
@@ -10,9 +11,16 @@ class EncryptionService {
     return enc.IV(Uint8List.fromList(bytes));
   }
 
+  static enc.Key _deriveKey(String password, List<int> salt) {
+    final derivator = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64));
+    derivator.init(Pbkdf2Parameters(Uint8List.fromList(salt), 100000, 32));
+    final keyBytes = derivator.process(Uint8List.fromList(utf8.encode(password)));
+    return enc.Key(Uint8List.fromList(keyBytes));
+  }
+
   static String encrypt(String plaintext, String password) {
     final salt = List.generate(32, (_) => Random.secure().nextInt(256));
-    final key = enc.Key.fromUtf8(password.padRight(32, '\x00').substring(0, 32));
+    final key = _deriveKey(password, salt);
     final iv = _generateIV();
     final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
     final encrypted = encrypter.encrypt(plaintext, iv: iv);
@@ -29,8 +37,9 @@ class EncryptionService {
   static String decrypt(String ciphertext, String password) {
     try {
       final payload = jsonDecode(utf8.decode(base64Decode(ciphertext))) as Map<String, dynamic>;
+      final salt = base64Decode(payload['salt'] as String);
       final iv = enc.IV.fromBase64(payload['iv'] as String);
-      final key = enc.Key.fromUtf8(password.padRight(32, '\x00').substring(0, 32));
+      final key = _deriveKey(password, salt);
       final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
       return encrypter.decrypt64(payload['data'] as String, iv: iv);
     } catch (_) {

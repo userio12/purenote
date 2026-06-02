@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:encrypt/encrypt.dart' as enc;
+import 'package:pointycastle/export.dart';
 
 class AuthService {
   static const _storage = FlutterSecureStorage();
@@ -55,6 +56,13 @@ class AuthService {
     return hash == storedHash;
   }
 
+  static String deriveKey(String password, List<int> salt, int keyLength) {
+    final derivator = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64));
+    derivator.init(Pbkdf2Parameters(Uint8List.fromList(salt), 100000, keyLength));
+    final key = derivator.process(Uint8List.fromList(utf8.encode(password)));
+    return base64Encode(key);
+  }
+
   Future<String?> getLockMethod() async {
     return await _storage.read(key: _lockMethodKey);
   }
@@ -70,9 +78,7 @@ class AuthService {
   }
 
   String _hash(String pin, List<int> salt) {
-    final input = '${base64Encode(salt)}:$pin';
-    final key = enc.Key.fromUtf8(input.padRight(32, '\x00').substring(0, 32));
-    return base64Encode(key.bytes);
+    return deriveKey(pin, salt, 32);
   }
 
   List<int> _generateSalt() {

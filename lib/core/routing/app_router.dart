@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purenote/features/audio/screens/audio_recorder_screen.dart';
 import 'package:purenote/features/notes/screens/notes_list_screen.dart';
+import 'package:purenote/features/notes/screens/note_viewer_screen.dart';
 import 'package:purenote/features/tasks/screens/task_lists_screen.dart';
 import 'package:purenote/features/tasks/screens/task_list_editor_screen.dart';
 import 'package:purenote/features/settings/screens/settings_screen.dart';
@@ -58,6 +59,14 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return NoteEditorScreen(noteId: id);
+      },
+    ),
+    GoRoute(
+      path: '/note/:id/view',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return NoteViewerScreen(noteId: id);
       },
     ),
     GoRoute(

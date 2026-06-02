@@ -1,14 +1,22 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
 import 'package:purenote/core/routing/app_router.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz_data;
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static const _channelId = 'purenote_reminders';
   static const _channelName = 'Reminders';
   static const _channelDesc = 'Note reminder notifications';
+  static bool _tzInitialized = false;
 
   static Future<void> init() async {
+    if (!_tzInitialized) {
+      tz_data.initializeTimeZones();
+      _tzInitialized = true;
+    }
+
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
@@ -43,7 +51,7 @@ class NotificationService {
   static Future<void> _onNotificationTap(NotificationResponse response) async {
     final payload = response.payload;
     if (payload == null || payload.isEmpty) return;
-    rootNavigatorKey.currentState?.pushReplacementNamed('/note/$payload');
+    rootNavigatorKey.currentState?.pushReplacementNamed('/note/$payload/view');
   }
 
   static Future<void> schedule(
@@ -65,11 +73,16 @@ class NotificationService {
       fullScreenIntent: true,
     );
 
-    await _plugin.show(
+    final tzScheduledDate = tz.TZDateTime.from(reminderAt, tz.local);
+    await _plugin.zonedSchedule(
       noteId.hashCode,
       title.isNotEmpty ? title : 'Note reminder',
       'Tap to open your note',
+      tzScheduledDate,
       NotificationDetails(android: androidDetails),
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       payload: noteId,
     );
   }
