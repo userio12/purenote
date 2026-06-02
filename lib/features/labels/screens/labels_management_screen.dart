@@ -39,15 +39,35 @@ class LabelsManagementScreen extends ConsumerWidget {
               ),
             );
           }
-          return ListView.builder(
+          return ReorderableListView.builder(
             itemCount: labels.length,
+            onReorder: (oldIndex, newIndex) {
+              final ids = labels.map((l) => l.id).toList();
+              final item = ids.removeAt(oldIndex);
+              ids.insert(newIndex > oldIndex ? newIndex - 1 : newIndex, item);
+              ref.read(labelDaoProvider).reorderLabels(ids);
+            },
+            buildDefaultDragHandles: false,
             itemBuilder: (context, index) {
               final label = labels[index];
               return ListTile(
-                leading: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: label.color != null ? Color(label.color!) : theme.colorScheme.surfaceContainerHighest,
-                  child: Icon(Icons.label, size: 16, color: Colors.white),
+                key: ValueKey(label.id),
+                leading: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ReorderableDragStartListener(
+                      index: index,
+                      child: const Padding(
+                        padding: EdgeInsets.only(right: 8),
+                        child: Icon(Icons.drag_handle, color: Colors.grey),
+                      ),
+                    ),
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: label.color != null ? Color(label.color!) : theme.colorScheme.surfaceContainerHighest,
+                      child: const Icon(Icons.label, size: 16, color: Colors.white),
+                    ),
+                  ],
                 ),
                 title: Text(label.name),
                 trailing: IconButton(

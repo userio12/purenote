@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -237,25 +238,30 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
                 error: (_, _) => const SizedBox.shrink(),
               ),
               Expanded(
-                child: settings.viewMode == 1
-                    ? _GridNotesView(
-                        pinned: pinned,
-                        unpinned: unpinned,
-                        selectedIds: _selectedIds,
-                        onTap: (note) => _onNoteTap(note),
-                        onLongPress: (note) => _onNoteLongPress(note),
-                        onPin: (note) => _togglePin(note),
-                        onDelete: (note) => _deleteNote(note),
-                      )
-                    : _ListNotesView(
-                        pinned: pinned,
-                        unpinned: unpinned,
-                        selectedIds: _selectedIds,
-                        onTap: (note) => _onNoteTap(note),
-                        onLongPress: (note) => _onNoteLongPress(note),
-                        onPin: (note) => _togglePin(note),
-                        onDelete: (note) => _deleteNote(note),
-                      ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: settings.viewMode == 1
+                      ? _GridNotesView(
+                          key: const ValueKey('grid'),
+                          pinned: pinned,
+                          unpinned: unpinned,
+                          selectedIds: _selectedIds,
+                          onTap: (note) => _onNoteTap(note),
+                          onLongPress: (note) => _onNoteLongPress(note),
+                          onPin: (note) => _togglePin(note),
+                          onDelete: (note) => _deleteNote(note),
+                        )
+                      : _ListNotesView(
+                          key: const ValueKey('list'),
+                          pinned: pinned,
+                          unpinned: unpinned,
+                          selectedIds: _selectedIds,
+                          onTap: (note) => _onNoteTap(note),
+                          onLongPress: (note) => _onNoteLongPress(note),
+                          onPin: (note) => _togglePin(note),
+                          onDelete: (note) => _deleteNote(note),
+                        ),
+                ),
               ),
             ],
           );
@@ -343,6 +349,7 @@ class _ListNotesView extends StatelessWidget {
   final void Function(Note) onDelete;
 
   const _ListNotesView({
+    super.key,
     required this.pinned,
     required this.unpinned,
     required this.selectedIds,
@@ -376,15 +383,28 @@ class _ListNotesView extends StatelessWidget {
 
         return Dismissible(
           key: ValueKey('note_${note.id}'),
-          direction: DismissDirection.endToStart,
+          direction: DismissDirection.horizontal,
           background: Container(
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 20),
+            color: Theme.of(context).colorScheme.primary,
+            child: note.isPinned
+                ? Icon(Icons.push_pin, color: Theme.of(context).colorScheme.onPrimary)
+                : Icon(Icons.push_pin_outlined, color: Theme.of(context).colorScheme.onPrimary),
+          ),
+          secondaryBackground: Container(
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 20),
             color: Theme.of(context).colorScheme.error,
             child: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.onError),
           ),
-          confirmDismiss: (_) async {
-            onDelete(note);
+          confirmDismiss: (direction) async {
+            if (direction == DismissDirection.startToEnd) {
+              HapticFeedback.mediumImpact();
+              onPin(note);
+            } else {
+              onDelete(note);
+            }
             return false;
           },
           child: NoteTile(
@@ -411,6 +431,7 @@ class _GridNotesView extends StatelessWidget {
   final void Function(Note) onDelete;
 
   const _GridNotesView({
+    super.key,
     required this.pinned,
     required this.unpinned,
     required this.selectedIds,

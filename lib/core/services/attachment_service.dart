@@ -9,9 +9,8 @@ import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/error/app_error.dart';
 
 class AttachmentService {
-  final AttachmentDao _dao;
-
-  AttachmentService(this._dao);
+  final AttachmentDao dao;
+  AttachmentService(this.dao);
 
   Future<String> _getAttachmentsDir() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -39,7 +38,7 @@ class AttachmentService {
       final destPath = p.join(attachDir, newName);
       await sourceFile.copy(destPath);
 
-      final attachment = await _dao.insert(AttachmentsCompanion(
+      final attachment = await dao.insert(AttachmentsCompanion(
         id: Value(const Uuid().v4()),
         noteId: Value(noteId),
         filePath: Value('attachments/$newName'),
@@ -61,7 +60,7 @@ class AttachmentService {
       if (await file.exists()) {
         await file.delete();
       }
-      return await _dao.delete(attachment.id);
+      return await dao.delete(attachment.id);
     } catch (e) {
       return Err(FileSystemError('Failed to delete attachment'));
     }
@@ -79,7 +78,7 @@ class AttachmentService {
       if (!await attachDir.exists()) return;
 
       final files = await attachDir.list().toList();
-      final all = await _dao.getByNoteId('%');
+      final all = await dao.getByNoteId('%');
 
       for (final file in files) {
         if (file is! File) continue;

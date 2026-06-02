@@ -69,6 +69,17 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           ],
           const Divider(),
           _sectionHeader(context, 'Manual backup'),
+          SwitchListTile(
+            title: const Text('Password protect backup'),
+            subtitle: const Text('Enter a password when creating or restoring'),
+            value: settings.backupPasswordProtected,
+            onChanged: (v) {
+              ref.read(settingsNotifierProvider.notifier).update(
+                settings.copyWith(backupPasswordProtected: v),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: _creating ? null : _createBackup,
             icon: _creating
@@ -93,13 +104,20 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   }
 
   Future<void> _createBackup() async {
+    final settings = ref.read(settingsNotifierProvider);
+    String? password;
+    if (settings.backupPasswordProtected) {
+      password = await _promptPassword(context, 'Set backup password');
+      if (password == null) return;
+    }
+
     setState(() => _creating = true);
     try {
       final db = ref.read(databaseProvider);
       final service = BackupService(db);
-      final settings = ref.read(settingsNotifierProvider);
       await service.createBackup(
         includeFiles: settings.backupIncludeFiles,
+        password: password?.isNotEmpty == true ? password : null,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -129,6 +147,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     setState(() => _restoring = true);
     try {
       final db = ref.read(databaseProvider);
+      final settings = ref.read(settingsNotifierProvider);
       final service = BackupService(db);
       final data = await service.loadBackup(path);
 
@@ -136,7 +155,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
       String? password;
       if (data.passwordProtected) {
-        password = await _promptPassword(context);
+        password = await _promptPassword(context, 'Backup password');
         if (password == null) return;
       }
 
@@ -149,7 +168,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             'This will replace all current data.\n\n'
             '${data.noteCount} notes\n'
             '${data.attachmentCount} attachments\n'
-            'Created: ${_formatDate(data.timestamp)}',
+            'Created: ${_formatDate(data.timestamp)}\n\n'
+            'A pre-restore backup will be created first.',
           ),
           actions: [
             TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
@@ -163,6 +183,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
       if (confirmed != true) return;
 
+      await service.createBackup(
+        includeFiles: settings.backupIncludeFiles,
+        password: password,
+      );
       await service.restoreBackup(path, password: password);
 
       if (mounted) {
@@ -181,7 +205,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     }
   }
 
-  Future<String?> _promptPassword(BuildContext context) {
+  Future<String?> _promptPassword(BuildContext context, [String title = 'Backup password']) {
     final controller = TextEditingController();
     return showDialog<String>(
       context: context,

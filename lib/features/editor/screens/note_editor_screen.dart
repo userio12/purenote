@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/providers/database_provider.dart';
@@ -491,6 +492,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
     await _attachFile(path, result.files.single.extension != null ? 'image/${result.files.single.extension}' : 'image/*');
   }
 
+  Future<void> _pickCamera() async {
+    final result = await ImagePicker().pickImage(source: ImageSource.camera);
+    if (result == null) return;
+    await _attachFile(result.path, 'image/jpeg');
+  }
+
   void _showReminderPicker() {
     showModalBottomSheet(
       context: context,
@@ -655,7 +662,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
                 showDirection: false,
                 showBoldButton: true,
                 showItalicButton: true,
-                showUnderLineButton: false,
+                showUnderLineButton: true,
                 showStrikeThrough: true,
                 showInlineCode: true,
                 showHeaderStyle: true,
@@ -689,6 +696,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
                 service: AttachmentService(ref.read(attachmentDaoProvider)),
                 onAdd: _pickFile,
                 onAddImage: _pickImage,
+                onAddCamera: _pickCamera,
                 onDelete: _deleteAttachment,
               ),
             _SaveStatusBar(saveStatus: saveStatus),

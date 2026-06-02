@@ -29,6 +29,7 @@ class Labels extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
   IntColumn get color => integer().nullable()();
+  RealColumn get orderIndex => real().withDefault(const Constant(0.0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -100,7 +101,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.noDb() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
@@ -112,6 +113,11 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('CREATE INDEX IF NOT EXISTS notes_is_pinned_idx ON notes(isPinned)');
           await customStatement('CREATE INDEX IF NOT EXISTS note_labels_note_id_idx ON note_labels(noteId)');
         } catch (_) {}
+      },
+      onUpgrade: (m, from, to) async {
+        if (from < 2) {
+          await m.addColumn(labels, labels.orderIndex);
+        }
       },
       beforeOpen: (details) async {
         await customStatement('PRAGMA journal_mode=WAL');

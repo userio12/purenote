@@ -56,16 +56,16 @@ void main() {
     });
 
     testWidgets('shows labels', (tester) async {
-      final labels = [Label(id: 'l1', name: 'Work', color: null)];
+      final labels = [Label(id: 'l1', name: 'Work', color: null, orderIndex: 0)];
       await tester.pumpWidget(_wrap(NoteCard(note: _baseNote, onTap: () {}, labels: labels)));
       expect(find.text('Work'), findsOneWidget);
     });
 
     testWidgets('shows overflow count for >2 labels', (tester) async {
       final labels = [
-        Label(id: 'l1', name: 'A', color: null),
-        Label(id: 'l2', name: 'B', color: null),
-        Label(id: 'l3', name: 'C', color: null),
+        Label(id: 'l1', name: 'A', color: null, orderIndex: 0),
+        Label(id: 'l2', name: 'B', color: null, orderIndex: 1),
+        Label(id: 'l3', name: 'C', color: null, orderIndex: 2),
       ];
       await tester.pumpWidget(_wrap(NoteCard(note: _baseNote, onTap: () {}, labels: labels)));
       expect(find.text('+1'), findsOneWidget);

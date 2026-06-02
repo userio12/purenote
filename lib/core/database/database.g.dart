@@ -735,8 +735,20 @@ class $LabelsTable extends Labels with TableInfo<$LabelsTable, Label> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _orderIndexMeta = const VerificationMeta(
+    'orderIndex',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, color];
+  late final GeneratedColumn<double> orderIndex = GeneratedColumn<double>(
+    'order_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, color, orderIndex];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -768,6 +780,12 @@ class $LabelsTable extends Labels with TableInfo<$LabelsTable, Label> {
         color.isAcceptableOrUnknown(data['color']!, _colorMeta),
       );
     }
+    if (data.containsKey('order_index')) {
+      context.handle(
+        _orderIndexMeta,
+        orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
+      );
+    }
     return context;
   }
 
@@ -789,6 +807,10 @@ class $LabelsTable extends Labels with TableInfo<$LabelsTable, Label> {
         DriftSqlType.int,
         data['${effectivePrefix}color'],
       ),
+      orderIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}order_index'],
+      )!,
     );
   }
 
@@ -802,7 +824,13 @@ class Label extends DataClass implements Insertable<Label> {
   final String id;
   final String name;
   final int? color;
-  const Label({required this.id, required this.name, this.color});
+  final double orderIndex;
+  const Label({
+    required this.id,
+    required this.name,
+    this.color,
+    required this.orderIndex,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -811,6 +839,7 @@ class Label extends DataClass implements Insertable<Label> {
     if (!nullToAbsent || color != null) {
       map['color'] = Variable<int>(color);
     }
+    map['order_index'] = Variable<double>(orderIndex);
     return map;
   }
 
@@ -821,6 +850,7 @@ class Label extends DataClass implements Insertable<Label> {
       color: color == null && nullToAbsent
           ? const Value.absent()
           : Value(color),
+      orderIndex: Value(orderIndex),
     );
   }
 
@@ -833,6 +863,7 @@ class Label extends DataClass implements Insertable<Label> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       color: serializer.fromJson<int?>(json['color']),
+      orderIndex: serializer.fromJson<double>(json['orderIndex']),
     );
   }
   @override
@@ -842,6 +873,7 @@ class Label extends DataClass implements Insertable<Label> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'color': serializer.toJson<int?>(color),
+      'orderIndex': serializer.toJson<double>(orderIndex),
     };
   }
 
@@ -849,16 +881,21 @@ class Label extends DataClass implements Insertable<Label> {
     String? id,
     String? name,
     Value<int?> color = const Value.absent(),
+    double? orderIndex,
   }) => Label(
     id: id ?? this.id,
     name: name ?? this.name,
     color: color.present ? color.value : this.color,
+    orderIndex: orderIndex ?? this.orderIndex,
   );
   Label copyWithCompanion(LabelsCompanion data) {
     return Label(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       color: data.color.present ? data.color.value : this.color,
+      orderIndex: data.orderIndex.present
+          ? data.orderIndex.value
+          : this.orderIndex,
     );
   }
 
@@ -867,37 +904,42 @@ class Label extends DataClass implements Insertable<Label> {
     return (StringBuffer('Label(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('color: $color')
+          ..write('color: $color, ')
+          ..write('orderIndex: $orderIndex')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, color);
+  int get hashCode => Object.hash(id, name, color, orderIndex);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Label &&
           other.id == this.id &&
           other.name == this.name &&
-          other.color == this.color);
+          other.color == this.color &&
+          other.orderIndex == this.orderIndex);
 }
 
 class LabelsCompanion extends UpdateCompanion<Label> {
   final Value<String> id;
   final Value<String> name;
   final Value<int?> color;
+  final Value<double> orderIndex;
   final Value<int> rowid;
   const LabelsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.color = const Value.absent(),
+    this.orderIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LabelsCompanion.insert({
     required String id,
     required String name,
     this.color = const Value.absent(),
+    this.orderIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name);
@@ -905,12 +947,14 @@ class LabelsCompanion extends UpdateCompanion<Label> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<int>? color,
+    Expression<double>? orderIndex,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (color != null) 'color': color,
+      if (orderIndex != null) 'order_index': orderIndex,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -919,12 +963,14 @@ class LabelsCompanion extends UpdateCompanion<Label> {
     Value<String>? id,
     Value<String>? name,
     Value<int?>? color,
+    Value<double>? orderIndex,
     Value<int>? rowid,
   }) {
     return LabelsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       color: color ?? this.color,
+      orderIndex: orderIndex ?? this.orderIndex,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -941,6 +987,9 @@ class LabelsCompanion extends UpdateCompanion<Label> {
     if (color.present) {
       map['color'] = Variable<int>(color.value);
     }
+    if (orderIndex.present) {
+      map['order_index'] = Variable<double>(orderIndex.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -953,6 +1002,7 @@ class LabelsCompanion extends UpdateCompanion<Label> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('color: $color, ')
+          ..write('orderIndex: $orderIndex, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3296,6 +3346,7 @@ typedef $$LabelsTableCreateCompanionBuilder =
       required String id,
       required String name,
       Value<int?> color,
+      Value<double> orderIndex,
       Value<int> rowid,
     });
 typedef $$LabelsTableUpdateCompanionBuilder =
@@ -3303,6 +3354,7 @@ typedef $$LabelsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<int?> color,
+      Value<double> orderIndex,
       Value<int> rowid,
     });
 
@@ -3350,6 +3402,11 @@ class $$LabelsTableFilterComposer
 
   ColumnFilters<int> get color => $composableBuilder(
     column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3402,6 +3459,11 @@ class $$LabelsTableOrderingComposer
     column: $table.color,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LabelsTableAnnotationComposer
@@ -3421,6 +3483,11 @@ class $$LabelsTableAnnotationComposer
 
   GeneratedColumn<int> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<double> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => column,
+  );
 
   Expression<T> noteLabelsRefs<T extends Object>(
     Expression<T> Function($$NoteLabelsTableAnnotationComposer a) f,
@@ -3479,11 +3546,13 @@ class $$LabelsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<int?> color = const Value.absent(),
+                Value<double> orderIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LabelsCompanion(
                 id: id,
                 name: name,
                 color: color,
+                orderIndex: orderIndex,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3491,11 +3560,13 @@ class $$LabelsTableTableManager
                 required String id,
                 required String name,
                 Value<int?> color = const Value.absent(),
+                Value<double> orderIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LabelsCompanion.insert(
                 id: id,
                 name: name,
                 color: color,
+                orderIndex: orderIndex,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -9,7 +9,22 @@ class LabelDao {
   LabelDao(this._db);
 
   Stream<List<Label>> watchAll() {
-    return _db.select(_db.labels).watch();
+    final query = _db.select(_db.labels)
+      ..orderBy([(l) => OrderingTerm(expression: l.orderIndex, mode: OrderingMode.asc)]);
+    return query.watch();
+  }
+
+  Future<Result<void>> reorderLabels(List<String> labelIds) async {
+    try {
+      for (var i = 0; i < labelIds.length; i++) {
+        await (_db.update(_db.labels)..where((l) => l.id.equals(labelIds[i])))
+          .write(LabelsCompanion(orderIndex: Value(i.toDouble())));
+      }
+      return const Ok(null);
+    } catch (e, s) {
+      ErrorLogger.logError('Failed to reorder labels', error: e, stackTrace: s);
+      return Err(DatabaseError('Failed to reorder labels'));
+    }
   }
 
   Future<Result<Label>> insert(LabelsCompanion companion) async {

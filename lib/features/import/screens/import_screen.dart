@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:purenote/core/providers/database_provider.dart';
+import 'package:purenote/core/services/attachment_service.dart';
 import 'package:purenote/features/import/services/import_service.dart';
 
 class ImportScreen extends ConsumerStatefulWidget {
@@ -16,6 +17,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   ImportSource? _selectedSource;
   ImportResult? _result;
   ImportProgress? _progress;
+  DuplicateHandling _duplicateHandling = DuplicateHandling.skip;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +30,23 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
         children: [
           Text('Choose a source format', style: theme.textTheme.titleMedium),
           const SizedBox(height: 12),
+          Row(
+            children: [
+              Text('Duplicates: ', style: theme.textTheme.bodyMedium),
+              DropdownButton<DuplicateHandling>(
+                value: _duplicateHandling,
+                underline: const SizedBox(),
+                items: const [
+                  DropdownMenuItem(value: DuplicateHandling.skip, child: Text('Skip existing')),
+                  DropdownMenuItem(value: DuplicateHandling.import, child: Text('Import all')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setState(() => _duplicateHandling = v);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           _SourceCard(
             icon: Icons.language,
             title: 'Google Keep',
@@ -117,9 +136,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     try {
       final noteDao = ref.read(noteDaoProvider);
       final labelDao = ref.read(labelDaoProvider);
-      final service = ImportService(noteDao, labelDao);
+      final attachmentDao = ref.read(attachmentDaoProvider);
+      final attachmentService = AttachmentService(attachmentDao);
+      final service = ImportService(noteDao, labelDao, attachmentService);
 
-      await for (final progress in service.importFile(path, source)) {
+      await for (final progress in service.importFile(path, source, duplicateHandling: _duplicateHandling)) {
         if (!mounted) return;
         setState(() => _progress = progress);
       }

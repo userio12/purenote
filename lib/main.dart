@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -79,6 +80,9 @@ class PurenoteApp extends ConsumerStatefulWidget {
 }
 
 class _PurenoteAppState extends ConsumerState<PurenoteApp> with WidgetsBindingObserver {
+  StreamSubscription? _noteSubscription;
+  Timer? _widgetDebounce;
+
   @override
   void initState() {
     super.initState();
@@ -87,6 +91,13 @@ class _PurenoteAppState extends ConsumerState<PurenoteApp> with WidgetsBindingOb
       ref.read(settingsNotifierProvider.notifier).load();
       final dao = ref.read(noteDaoProvider);
       WidgetService.updateWidgetData(dao);
+
+      _noteSubscription = dao.watchAll().listen((_) {
+        _widgetDebounce?.cancel();
+        _widgetDebounce = Timer(const Duration(seconds: 2), () {
+          WidgetService.updateWidgetData(dao);
+        });
+      });
 
       final attachmentDao = ref.read(attachmentDaoProvider);
       final attachmentService = AttachmentService(attachmentDao);
@@ -97,6 +108,8 @@ class _PurenoteAppState extends ConsumerState<PurenoteApp> with WidgetsBindingOb
 
   @override
   void dispose() {
+    _noteSubscription?.cancel();
+    _widgetDebounce?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
