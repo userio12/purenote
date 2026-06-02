@@ -90,12 +90,24 @@ class _PurenoteAppState extends ConsumerState<PurenoteApp> with WidgetsBindingOb
     Future.microtask(() async {
       ref.read(settingsNotifierProvider.notifier).load();
       final dao = ref.read(noteDaoProvider);
-      WidgetService.updateWidgetData(dao);
+      final settings = ref.read(settingsNotifierProvider);
+      WidgetService.updateWidgetData(
+        dao,
+        widgetSource: settings.widgetSource,
+        widgetMaxItems: settings.widgetMaxItems,
+        widgetTheme: settings.widgetTheme,
+      );
 
       _noteSubscription = dao.watchAll().listen((_) {
         _widgetDebounce?.cancel();
         _widgetDebounce = Timer(const Duration(seconds: 2), () {
-          WidgetService.updateWidgetData(dao);
+          final s = ref.read(settingsNotifierProvider);
+          WidgetService.updateWidgetData(
+            dao,
+            widgetSource: s.widgetSource,
+            widgetMaxItems: s.widgetMaxItems,
+            widgetTheme: s.widgetTheme,
+          );
         });
       });
 

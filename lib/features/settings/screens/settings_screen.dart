@@ -179,6 +179,63 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
           _sectionHeader(context, 'Widget'),
           ListTile(
+            title: const Text('Source'),
+            subtitle: Text(settings.widgetSource == 'pinned' ? 'Pinned notes' : 'All notes'),
+            trailing: DropdownButton<String>(
+              value: settings.widgetSource,
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: 'pinned', child: Text('Pinned notes')),
+                DropdownMenuItem(value: 'all', child: Text('All notes')),
+              ],
+              onChanged: (v) {
+                if (v != null) {
+                  ref.read(settingsNotifierProvider.notifier).update(
+                    settings.copyWith(widgetSource: v),
+                  );
+                }
+              },
+            ),
+          ),
+          ListTile(
+            title: const Text('Max items'),
+            trailing: DropdownButton<int>(
+              value: settings.widgetMaxItems,
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: 3, child: Text('3')),
+                DropdownMenuItem(value: 5, child: Text('5')),
+                DropdownMenuItem(value: 10, child: Text('10')),
+              ],
+              onChanged: (v) {
+                if (v != null) {
+                  ref.read(settingsNotifierProvider.notifier).update(
+                    settings.copyWith(widgetMaxItems: v),
+                  );
+                }
+              },
+            ),
+          ),
+          ListTile(
+            title: const Text('Theme'),
+            trailing: DropdownButton<String>(
+              value: settings.widgetTheme,
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: 'match', child: Text('Match app')),
+                DropdownMenuItem(value: 'light', child: Text('Light')),
+                DropdownMenuItem(value: 'dark', child: Text('Dark')),
+              ],
+              onChanged: (v) {
+                if (v != null) {
+                  ref.read(settingsNotifierProvider.notifier).update(
+                    settings.copyWith(widgetTheme: v),
+                  );
+                }
+              },
+            ),
+          ),
+          ListTile(
             title: const Text('Refresh widget'),
             subtitle: const Text('Update the home screen widget data'),
             leading: const Icon(Icons.widgets_outlined),
@@ -246,7 +303,13 @@ class SettingsScreen extends ConsumerWidget {
 
   void _refreshWidget(BuildContext context, WidgetRef ref) {
     final dao = ref.read(noteDaoProvider);
-    WidgetService.updateWidgetData(dao);
+    final settings = ref.read(settingsNotifierProvider);
+    WidgetService.updateWidgetData(
+      dao,
+      widgetSource: settings.widgetSource,
+      widgetMaxItems: settings.widgetMaxItems,
+      widgetTheme: settings.widgetTheme,
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Widget updated')),
     );

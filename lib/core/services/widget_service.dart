@@ -1,17 +1,32 @@
 import 'package:home_widget/home_widget.dart';
+import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
 
 class WidgetService {
   static const _titleKey = 'title';
   static const _bodyKey = 'body';
+  static const _sourceKey = 'widgetSource';
+  static const _maxItemsKey = 'widgetMaxItems';
+  static const _themeKey = 'widgetTheme';
 
-  static Future<void> updateWidgetData(NoteDao dao) async {
+  static Future<void> updateWidgetData(
+    NoteDao dao, {
+    String widgetSource = 'pinned',
+    int widgetMaxItems = 5,
+    String widgetTheme = 'match',
+  }) async {
     try {
-      final notes = await dao.getAll();
+      List<Note> notes;
+      if (widgetSource == 'pinned') {
+        notes = await dao.getAll();
+        notes = notes.where((n) => n.isPinned).toList();
+      } else {
+        notes = await dao.getAll();
+      }
       final nonEmpty = notes.where((n) => n.content.isNotEmpty || n.title.isNotEmpty).toList();
       nonEmpty.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-      final recent = nonEmpty.take(5).toList();
+      final recent = nonEmpty.take(widgetMaxItems).toList();
 
       String title;
       String body;
@@ -32,6 +47,9 @@ class WidgetService {
 
       await HomeWidget.saveWidgetData<String>(_titleKey, title);
       await HomeWidget.saveWidgetData<String>(_bodyKey, body);
+      await HomeWidget.saveWidgetData<String>(_sourceKey, widgetSource);
+      await HomeWidget.saveWidgetData<String>(_maxItemsKey, widgetMaxItems.toString());
+      await HomeWidget.saveWidgetData<String>(_themeKey, widgetTheme);
       await HomeWidget.updateWidget(
         androidName: 'PureNoteWidgetProvider',
         qualifiedAndroidName: 'com.purenote.purenote.PureNoteWidgetProvider',

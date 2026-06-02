@@ -17,6 +17,9 @@ class AppSettings {
   final String backupInterval; // 'daily', 'weekly', 'monthly'
   final bool backupIncludeFiles;
   final bool backupPasswordProtected;
+  final String widgetSource; // 'pinned', 'all'
+  final int widgetMaxItems; // 3, 5, 10
+  final String widgetTheme; // 'match', 'light', 'dark'
 
   const AppSettings({
     this.themeMode = ThemeMode.system,
@@ -31,6 +34,9 @@ class AppSettings {
     this.backupInterval = 'daily',
     this.backupIncludeFiles = false,
     this.backupPasswordProtected = false,
+    this.widgetSource = 'pinned',
+    this.widgetMaxItems = 5,
+    this.widgetTheme = 'match',
   });
 
   AppSettings copyWith({
@@ -46,6 +52,9 @@ class AppSettings {
     String? backupInterval,
     bool? backupIncludeFiles,
     bool? backupPasswordProtected,
+    String? widgetSource,
+    int? widgetMaxItems,
+    String? widgetTheme,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -60,6 +69,9 @@ class AppSettings {
       backupInterval: backupInterval ?? this.backupInterval,
       backupIncludeFiles: backupIncludeFiles ?? this.backupIncludeFiles,
       backupPasswordProtected: backupPasswordProtected ?? this.backupPasswordProtected,
+      widgetSource: widgetSource ?? this.widgetSource,
+      widgetMaxItems: widgetMaxItems ?? this.widgetMaxItems,
+      widgetTheme: widgetTheme ?? this.widgetTheme,
     );
   }
 
@@ -76,6 +88,9 @@ class AppSettings {
     'backupInterval': backupInterval,
     'backupIncludeFiles': backupIncludeFiles.toString(),
     'backupPasswordProtected': backupPasswordProtected.toString(),
+    'widgetSource': widgetSource,
+    'widgetMaxItems': widgetMaxItems.toString(),
+    'widgetTheme': widgetTheme,
   };
 
   factory AppSettings.fromMap(Map<String, String> map) {
@@ -92,6 +107,9 @@ class AppSettings {
       backupInterval: map['backupInterval'] ?? 'daily',
       backupIncludeFiles: map['backupIncludeFiles'] == 'true',
       backupPasswordProtected: map['backupPasswordProtected'] == 'true',
+      widgetSource: map['widgetSource'] ?? 'pinned',
+      widgetMaxItems: int.tryParse(map['widgetMaxItems'] ?? '5') ?? 5,
+      widgetTheme: map['widgetTheme'] ?? 'match',
     );
   }
 }

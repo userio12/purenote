@@ -18,6 +18,9 @@ void main() {
       expect(settings.backupInterval, 'daily');
       expect(settings.backupIncludeFiles, false);
       expect(settings.backupPasswordProtected, false);
+      expect(settings.widgetSource, 'pinned');
+      expect(settings.widgetMaxItems, 5);
+      expect(settings.widgetTheme, 'match');
     });
 
     test('copyWith preserves unspecified fields', () {
@@ -51,6 +54,9 @@ void main() {
       expect(restored.lockNewNotes, settings.lockNewNotes);
       expect(restored.autoBackup, settings.autoBackup);
       expect(restored.backupInterval, settings.backupInterval);
+      expect(restored.widgetSource, settings.widgetSource);
+      expect(restored.widgetMaxItems, settings.widgetMaxItems);
+      expect(restored.widgetTheme, settings.widgetTheme);
     });
 
     test('toMap handles null lockMethod', () {
