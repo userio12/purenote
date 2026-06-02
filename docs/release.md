@@ -1,4 +1,4 @@
-# Release Guide — purenote v1.0.0
+# Release Guide — purenote
 
 ## Prerequisites
 
@@ -8,6 +8,7 @@
 | Java 17 | `java --version` |
 | Android SDK 34+ | `flutter doctor -v` |
 | Google Play Console account | \$25 one-time registration fee |
+| Sentry auth token (optional) | `SENTRY_AUTH_TOKEN` env var for debug symbol upload |
 
 ## 1. Generate Keystore
 
@@ -68,6 +69,9 @@ flutter analyze
 # Test
 flutter test
 
+# Codegen (if schema/providers changed)
+dart run build_runner build --delete-conflicting-outputs
+
 # Build release AAB
 flutter build appbundle --release --obfuscate \
   --split-debug-info=build/app/outputs/symbols
@@ -78,14 +82,31 @@ flutter build appbundle --release --obfuscate \
 
 Upload `app-release.aab` to Play Console → Internal Testing track.
 
-Debug symbols go to `build/app/outputs/symbols/` (keep for Sentry).
+## 5. Upload Debug Symbols to Sentry
 
-## 5. Play Console Checklist
+If Sentry crash reporting is enabled, upload debug symbols so stack traces are symbolicated:
+
+```bash
+# Install sentry-cli
+# See https://docs.sentry.io/product/cli/installation/
+
+# Set your auth token (or use the env var)
+export SENTRY_AUTH_TOKEN=your-auth-token
+export SENTRY_ORG=your-org
+export SENTRY_PROJECT=purenote
+
+# Upload debug symbols
+sentry-cli upload-dif --include-sources build/app/outputs/symbols/
+```
+
+The CI workflow (`.github/workflows/flutter-release.yml`) automatically uploads the symbols as a build artifact. You can download them from GitHub Actions and run `sentry-cli upload-dif` manually, or add a step in CI.
+
+## 6. Play Console Checklist
 
 ### App content
-- [ ] App name: "purenote"
-- [ ] Short description (80 char): "Minimal offline note-taking app. Rich text, tasks, labels, PIN lock, and backups."
-- [ ] Full description (4000 char): expand on features
+- [ ] App name: **purenote**
+- [ ] Short description (80 char): Minimal offline note-taking app. Rich text, tasks, labels, PIN lock, and backups.
+- [ ] Full description (4000 char): Expand on all features (rich text, task lists, labels, search, reminders, attachments, audio recording, import from Keep/Evernote/Quillpad, backup/restore with optional AES encryption, biometric PIN lock, per-note encryption, home screen widget)
 - [ ] Screenshots (2–8): 1080×1920 or 1080×2400 PNG
 - [ ] Feature graphic: 1024×500 PNG
 - [ ] Icon: 512×512 PNG (Play Store icon, can differ from app icon)
@@ -107,30 +128,32 @@ Debug symbols go to `build/app/outputs/symbols/` (keep for Sentry).
 - [ ] Available in all countries (or select)
 - [ ] No ads (enable "Contains ads" if you add any)
 
-## 6. Privacy Policy
+## 7. Privacy Policy
 
 Since purenote has **no internet permission and collects no data**, use a minimal hosted policy:
 
 Option A — Free hosted: Use [Privacy Policy Generator](https://privacypolicygenerator.info/) or similar.
-Option B — GitHub Pages: Create a `docs/PRIVACY.md` and serve via GitHub Pages:
+Option B — GitHub Pages: Create `docs/PRIVACY.md` and serve via GitHub Pages:
 
 ```md
 # Privacy Policy — purenote
 
-**Last updated:** 2026-05-29
+**Last updated:** 2026-06-02
 
 purenote does not collect, store, or transmit any personal data.
 
 All notes, tasks, settings, and attachments are stored locally on your device.
 
-The app has no internet permission.
+The app has no internet permission and makes no network requests.
 
 No third-party services receive data from purenote.
 
 If you have questions, contact: your-email@example.com
 ```
 
-## 7. Tag Release
+Enable GitHub Pages on the repo (Settings → Pages → deploy from `main` /docs folder → URL will be `https://<user>.github.io/purenote/PRIVACY.html`).
+
+## 8. Tag Release
 
 ```bash
 git add . && git commit -m "chore: bump to v1.0.0"
@@ -140,10 +163,19 @@ git push && git push --tags
 
 This triggers the CI workflow (`.github/workflows/flutter-release.yml`) which builds the AAB and uploads it as a GitHub Actions artifact.
 
-## 8. Internal Testing
+## 9. Internal Testing
 
 1. In Play Console → Release → Testing → Internal testing
 2. Create a new release, upload AAB, fill in release notes
 3. Add up to 100 testers via email
 4. Testers install from the opt-in link
 5. Smoke test on physical devices for 48h before promoting to Closed/Open track
+
+## 10. Production Rollout
+
+1. After 48h of internal testing with zero crashes → promote to Closed Testing
+2. Start with 20% staged rollout
+3. Monitor Sentry crash-free rate (target > 99.7%)
+4. After 24h → promote to Production
+5. Rollout: 1% → 10% → 50% → 100% over 72h
+6. Post-release: monitor first-week crash-free sessions
