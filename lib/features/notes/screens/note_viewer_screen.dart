@@ -5,13 +5,17 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
 import 'package:purenote/core/providers/database_provider.dart';
+import 'package:purenote/core/services/notification_service.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
 import 'package:purenote/features/notes/providers/notes_provider.dart';
 import 'package:purenote/features/labels/widgets/label_chip.dart';
+import 'package:purenote/features/audio/widgets/audio_player_widget.dart';
 
 class NoteViewerScreen extends ConsumerStatefulWidget {
   final String noteId;
@@ -55,6 +59,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
       ),
     );
     if (confirmed == true && mounted) {
+      await NotificationService.cancel(note.id);
       await dao.delete(note.id);
       if (mounted) context.pop();
     }
@@ -149,111 +154,150 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
     final labelsAsync = ref.watch(labelsForNoteProvider(note.id));
     final attachmentsAsync = ref.watch(attachmentsForNoteProvider(note.id));
     final dateFormat = DateFormat.yMMMd().add_jm();
+    final bgColor = note.color != null ? Color(note.color!).withValues(alpha: 0.08) : null;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            note.title.isNotEmpty ? note.title : 'Untitled',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
-              const SizedBox(width: 4),
-              Text(
-                'Created: ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.createdAt))}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(Icons.update, size: 14, color: Colors.grey.shade500),
-              const SizedBox(width: 4),
-              Text(
-                'Updated: ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.updatedAt))}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
-              ),
-            ],
-          ),
-          if (note.reminderAt != null) ...[
-            const SizedBox(height: 4),
+    return Container(
+      color: bgColor,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              note.title.isNotEmpty ? note.title : 'Untitled',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.notifications, size: 14, color: Colors.grey.shade500),
+                Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
                 const SizedBox(width: 4),
                 Text(
-                  'Reminder: ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.reminderAt!))}',
+                  'Created: ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.createdAt))}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
                 ),
               ],
             ),
-          ],
-          if (note.isPinned) ...[
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.push_pin, size: 14, color: Colors.grey.shade500),
+                Icon(Icons.update, size: 14, color: Colors.grey.shade500),
                 const SizedBox(width: 4),
-                Text('Pinned', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500)),
+                Text(
+                  'Updated: ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.updatedAt))}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+                ),
               ],
             ),
-          ],
-          const SizedBox(height: 12),
-          labelsAsync.when(
-            data: (labels) => labels.isNotEmpty
-                ? Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: labels.map((l) => LabelChip(label: l, selected: false)).toList(),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-          const Divider(),
-          if (_document != null && _document!.length > 0)
-            QuillEditor.basic(
-              controller: QuillController(
-                document: _document!,
-                selection: const TextSelection.collapsed(offset: 0),
-              ),
-              config: const QuillEditorConfig(
-                padding: EdgeInsets.all(4),
-              ),
-            ),
-          attachmentsAsync.when(
-            data: (attachments) => attachments.isEmpty
-                ? const SizedBox.shrink()
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      const Divider(),
-                      Text('Attachments', style: Theme.of(context).textTheme.titleSmall),
-                      const SizedBox(height: 8),
-                      ...attachments.map((a) => ListTile(
-                        leading: Icon(_iconForMime(a.mimeType)),
-                        title: Text(a.fileName),
-                        subtitle: Text(_formatSize(a.fileSize)),
-                        dense: true,
-                      )),
-                    ],
+            if (note.reminderAt != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.notifications, size: 14, color: Colors.grey.shade500),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Reminder: ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.reminderAt!))}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
                   ),
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-        ],
+                ],
+              ),
+            ],
+            if (note.isPinned) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.push_pin, size: 14, color: Colors.grey.shade500),
+                  const SizedBox(width: 4),
+                  Text('Pinned', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500)),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
+            labelsAsync.when(
+              data: (labels) => labels.isNotEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: labels.map((l) => LabelChip(label: l, selected: false)).toList(),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
+            const Divider(),
+            if (_document != null && _document!.length > 0)
+              QuillEditor.basic(
+                controller: QuillController(
+                  document: _document!,
+                  selection: const TextSelection.collapsed(offset: 0),
+                ),
+                config: QuillEditorConfig(
+                  padding: EdgeInsets.all(4),
+                  onLaunchUrl: (url) async {
+                    final uri = Uri.tryParse(url.toString());
+                    if (uri != null && await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    }
+                  },
+                ),
+              ),
+            attachmentsAsync.when(
+              data: (attachments) => attachments.isEmpty
+                  ? const SizedBox.shrink()
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        Text('Attachments', style: Theme.of(context).textTheme.titleSmall),
+                        const SizedBox(height: 8),
+                        ...attachments.map((a) {
+                          if (a.mimeType.startsWith('audio/')) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.audiotrack, size: 20, color: Colors.grey.shade600),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: NoteAudioPlayer(
+                                      filePath: a.filePath,
+                                      dense: true,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          return ListTile(
+                            leading: Icon(_iconForMime(a.mimeType)),
+                            title: Text(a.fileName),
+                            subtitle: Text(_formatSize(a.fileSize)),
+                            dense: true,
+                            onTap: () => _openAttachment(a),
+                          );
+                        }),
+                      ],
+                    ),
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _openAttachment(Attachment attachment) async {
+    final result = await OpenFilex.open(attachment.filePath);
+    if (result.type != ResultType.done && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open file: ${result.message}')),
+      );
+    }
   }
 
   IconData _iconForMime(String mimeType) {

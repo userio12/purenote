@@ -6,7 +6,7 @@ part of 'lock_state_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$lockStateHash() => r'9250f6629f23c9ad6828e6eb305cb2bdec3df837';
+String _$lockStateHash() => r'69828f605ed632db69ee54789938782395753861';
 
 /// See also [LockState].
 @ProviderFor(LockState)

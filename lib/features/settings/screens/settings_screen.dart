@@ -120,6 +120,24 @@ class SettingsScreen extends ConsumerWidget {
               );
             },
           ),
+          ListTile(
+            title: const Text('Lock method'),
+            subtitle: Text(_lockMethodLabel(settings.lockMethod)),
+            trailing: DropdownButton<String?>(
+              value: settings.lockMethod,
+              underline: const SizedBox(),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('PIN only')),
+                DropdownMenuItem(value: 'biometric', child: Text('Biometric only')),
+                DropdownMenuItem(value: 'both', child: Text('PIN or biometric')),
+              ],
+              onChanged: (v) {
+                ref.read(settingsNotifierProvider.notifier).update(
+                  settings.copyWith(lockMethod: v),
+                );
+              },
+            ),
+          ),
           SwitchListTile(
             title: const Text('Lock new notes by default'),
             subtitle: const Text('Newly created notes start locked'),
@@ -216,6 +234,14 @@ class SettingsScreen extends ConsumerWidget {
     if (seconds < 60) return '$seconds seconds';
     final min = seconds ~/ 60;
     return '$min minute${min > 1 ? 's' : ''}';
+  }
+
+  String _lockMethodLabel(String? method) {
+    switch (method) {
+      case 'biometric': return 'Biometric only';
+      case 'both': return 'PIN or biometric';
+      default: return 'PIN only';
+    }
   }
 
   void _refreshWidget(BuildContext context, WidgetRef ref) {

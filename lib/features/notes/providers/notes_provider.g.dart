@@ -6,7 +6,24 @@ part of 'notes_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$noteByIdHash() => r'27b3d7013421126d4f6c51cda45f2b6e2ffda882';
+String _$allLabelsHash() => r'20568c7b7f451c62bbe5157d33a8dd488a717841';
+
+/// See also [allLabels].
+@ProviderFor(allLabels)
+final allLabelsProvider = AutoDisposeFutureProvider<List<Label>>.internal(
+  allLabels,
+  name: r'allLabelsProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$allLabelsHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AllLabelsRef = AutoDisposeFutureProviderRef<List<Label>>;
+String _$notesByLabelHash() => r'651ebdd9638ca93bb76024c09d33761860f414c3';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -28,6 +45,126 @@ class _SystemHash {
     return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
   }
 }
+
+/// See also [notesByLabel].
+@ProviderFor(notesByLabel)
+const notesByLabelProvider = NotesByLabelFamily();
+
+/// See also [notesByLabel].
+class NotesByLabelFamily extends Family<AsyncValue<List<Note>>> {
+  /// See also [notesByLabel].
+  const NotesByLabelFamily();
+
+  /// See also [notesByLabel].
+  NotesByLabelProvider call(String labelId) {
+    return NotesByLabelProvider(labelId);
+  }
+
+  @override
+  NotesByLabelProvider getProviderOverride(
+    covariant NotesByLabelProvider provider,
+  ) {
+    return call(provider.labelId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'notesByLabelProvider';
+}
+
+/// See also [notesByLabel].
+class NotesByLabelProvider extends AutoDisposeStreamProvider<List<Note>> {
+  /// See also [notesByLabel].
+  NotesByLabelProvider(String labelId)
+    : this._internal(
+        (ref) => notesByLabel(ref as NotesByLabelRef, labelId),
+        from: notesByLabelProvider,
+        name: r'notesByLabelProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$notesByLabelHash,
+        dependencies: NotesByLabelFamily._dependencies,
+        allTransitiveDependencies:
+            NotesByLabelFamily._allTransitiveDependencies,
+        labelId: labelId,
+      );
+
+  NotesByLabelProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.labelId,
+  }) : super.internal();
+
+  final String labelId;
+
+  @override
+  Override overrideWith(
+    Stream<List<Note>> Function(NotesByLabelRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: NotesByLabelProvider._internal(
+        (ref) => create(ref as NotesByLabelRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        labelId: labelId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeStreamProviderElement<List<Note>> createElement() {
+    return _NotesByLabelProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is NotesByLabelProvider && other.labelId == labelId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, labelId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin NotesByLabelRef on AutoDisposeStreamProviderRef<List<Note>> {
+  /// The parameter `labelId` of this provider.
+  String get labelId;
+}
+
+class _NotesByLabelProviderElement
+    extends AutoDisposeStreamProviderElement<List<Note>>
+    with NotesByLabelRef {
+  _NotesByLabelProviderElement(super.provider);
+
+  @override
+  String get labelId => (origin as NotesByLabelProvider).labelId;
+}
+
+String _$noteByIdHash() => r'27b3d7013421126d4f6c51cda45f2b6e2ffda882';
 
 /// See also [noteById].
 @ProviderFor(noteById)

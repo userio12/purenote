@@ -16,6 +16,18 @@ class NotesStream extends _$NotesStream {
 }
 
 @riverpod
+Future<List<Label>> allLabels(AllLabelsRef ref) {
+  final dao = ref.watch(labelDaoProvider);
+  return dao.getAll();
+}
+
+@riverpod
+Stream<List<Note>> notesByLabel(NotesByLabelRef ref, String labelId) {
+  final dao = ref.watch(noteDaoProvider);
+  return dao.watchByLabel(labelId);
+}
+
+@riverpod
 Stream<Note?> noteById(NoteByIdRef ref, String id) {
   final dao = ref.watch(noteDaoProvider);
   return dao.watchById(id);

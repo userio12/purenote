@@ -7,6 +7,8 @@ import 'package:drift/drift.dart' show Value;
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/providers/database_provider.dart';
+import 'package:purenote/core/theme/app_theme.dart';
+import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
 
 class TaskListEditorScreen extends ConsumerStatefulWidget {
   final String? noteId;
@@ -20,8 +22,14 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
   late TextEditingController _titleController;
   final _itemControllers = <String, TextEditingController>{};
   final _itemFocusNodes = <String, FocusNode>{};
+  final _itemChecked = <String, bool>{};
+  final _itemParentId = <String, String?>{};
   bool _isNew = true;
   Timer? _saveTimer;
+  int? _selectedColor;
+  List<Label> _noteLabels = [];
+  bool _isPinned = false;
+  bool _autoSort = true;
 
   @override
   void initState() {
@@ -35,8 +43,8 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
   void dispose() {
     _saveTimer?.cancel();
     _titleController.dispose();
-    for (final c in _itemControllers.values) { c.dispose(); }
-    for (final f in _itemFocusNodes.values) { f.dispose(); }
+    for (final c in _itemControllers.values) c.dispose();
+    for (final f in _itemFocusNodes.values) f.dispose();
     super.dispose();
   }
 
@@ -45,24 +53,32 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
     final note = await dao.getById(widget.noteId!);
     if (note != null && mounted) {
       _titleController.text = note.title;
+      _selectedColor = note.color;
+      _isPinned = note.isPinned;
+      final labelDao = ref.read(labelDaoProvider);
+      _noteLabels = await labelDao.getLabelsForNote(note.id);
       final taskDao = ref.read(taskDaoProvider);
       final items = await taskDao.watchByNoteId(widget.noteId!).first;
       if (mounted) {
         setState(() {
           for (final item in items) {
-        _itemControllers[item.id] = TextEditingController(text: item.content);
-        _itemFocusNodes[item.id] = FocusNode();
-      }
+            _itemControllers[item.id] = TextEditingController(text: item.content);
+            _itemFocusNodes[item.id] = FocusNode();
+            _itemChecked[item.id] = item.isChecked;
+            _itemParentId[item.id] = item.parentId;
+          }
         });
       }
     }
   }
 
-  void _addItem() {
+  void _addItem({String? parentId}) {
     final id = const Uuid().v4();
     setState(() {
       _itemControllers[id] = TextEditingController();
       _itemFocusNodes[id] = FocusNode();
+      _itemChecked[id] = false;
+      _itemParentId[id] = parentId;
     });
     _debounceSave();
     Future.microtask(() => _itemFocusNodes[id]?.requestFocus());
@@ -71,11 +87,85 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
   void _removeItem(String id) {
     _itemControllers[id]?.dispose();
     _itemFocusNodes[id]?.dispose();
+    final childIds = _itemParentId.entries
+        .where((e) => e.value == id)
+        .map((e) => e.key)
+        .toList();
     setState(() {
       _itemControllers.remove(id);
       _itemFocusNodes.remove(id);
+      _itemChecked.remove(id);
+      _itemParentId.remove(id);
+      for (final cid in childIds) _itemParentId[cid] = null;
     });
     _debounceSave();
+  }
+
+  void _toggleChecked(String id) {
+    setState(() {
+      _itemChecked[id] = !(_itemChecked[id] ?? false);
+    });
+    _debounceSave();
+  }
+
+  void _toggleSubtask(String id) {
+    setState(() {
+      _itemParentId[id] = _itemParentId[id] == null ? _firstUncheckedId(id) : null;
+    });
+    _debounceSave();
+  }
+
+  String? _firstUncheckedId(String excludeId) {
+    final sorted = _sortedItems();
+    for (final item in sorted) {
+      if (item.key != excludeId && !(_itemChecked[item.key] ?? false)) return item.key;
+    }
+    return null;
+  }
+
+  void _removeAllChecked() {
+    setState(() {
+      final checked = _itemChecked.entries.where((e) => e.value).map((e) => e.key).toSet();
+      for (final id in checked) {
+        _itemControllers[id]?.dispose();
+        _itemFocusNodes[id]?.dispose();
+        final childIds = _itemParentId.entries
+            .where((e) => e.value == id)
+            .map((e) => e.key)
+            .toList();
+        _itemControllers.remove(id);
+        _itemFocusNodes.remove(id);
+        _itemChecked.remove(id);
+        _itemParentId.remove(id);
+        for (final cid in childIds) _itemParentId[cid] = null;
+      }
+    });
+    _debounceSave();
+  }
+
+  List<MapEntry<String, int>> _sortedItems() {
+    final entries = _itemControllers.entries.toList();
+    if (!_autoSort) {
+      return entries.asMap().entries.map((e) => MapEntry(e.value.key, e.key)).toList();
+    }
+    final unchecked = <MapEntry<String, int>>[];
+    final checked = <MapEntry<String, int>>[];
+    for (var i = 0; i < entries.length; i++) {
+      final id = entries[i].key;
+      if (_itemChecked[id] == true) {
+        checked.add(MapEntry(id, i));
+      } else {
+        unchecked.add(MapEntry(id, i));
+      }
+    }
+    return [...unchecked, ...checked];
+  }
+
+  List<String> _childIds(String parentId) {
+    return _itemParentId.entries
+        .where((e) => e.value == parentId)
+        .map((e) => e.key)
+        .toList();
   }
 
   void _debounceSave() {
@@ -91,16 +181,14 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
       final now = DateTime.now().millisecondsSinceEpoch;
 
       if (_isNew) {
-        final result = await noteDao.insert(
-          id: id,
-          createdAt: now,
-          updatedAt: now,
-        );
+        final result = await noteDao.insert(id: id, createdAt: now, updatedAt: now);
         if (result is Ok && mounted) {
           await noteDao.updateFields(NotesCompanion(
             id: Value(id),
             title: Value(_titleController.text),
             type: const Value(1),
+            color: Value(_selectedColor),
+            isPinned: Value(_isPinned),
           ));
         }
         _isNew = false;
@@ -108,6 +196,8 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
         await noteDao.updateFields(NotesCompanion(
           id: Value(widget.noteId!),
           title: Value(_titleController.text),
+          color: Value(_selectedColor),
+          isPinned: Value(_isPinned),
           updatedAt: Value(now),
         ));
         await taskDao.deleteByNoteId(id);
@@ -120,7 +210,8 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
             id: Value(entry.key),
             noteId: Value(id),
             content: Value(entry.value.text),
-            isChecked: const Value(false),
+            isChecked: Value(_itemChecked[entry.key] ?? false),
+            parentId: Value(_itemParentId[entry.key]),
             orderIndex: Value(orderIndex),
           ));
           orderIndex += 1.0;
@@ -143,8 +234,98 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
     return true;
   }
 
+  void _showColorPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Color', style: Theme.of(ctx).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      setState(() => _selectedColor = null);
+                      Navigator.pop(ctx);
+                    },
+                    child: Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.shade400),
+                        color: _selectedColor == null
+                            ? Theme.of(ctx).colorScheme.primaryContainer
+                            : null,
+                      ),
+                      child: _selectedColor == null
+                          ? Icon(Icons.check, size: 18, color: Theme.of(ctx).colorScheme.onPrimaryContainer)
+                          : Icon(Icons.close, size: 18, color: Colors.grey.shade500),
+                    ),
+                  ),
+                  for (final c in AppTheme.noteColors)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        setState(() => _selectedColor = c);
+                        Navigator.pop(ctx);
+                      },
+                      child: Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(c),
+                          border: _selectedColor == c
+                              ? Border.all(color: Theme.of(ctx).colorScheme.primary, width: 3)
+                              : null,
+                        ),
+                        child: _selectedColor == c
+                            ? Icon(Icons.check, size: 18, color: Colors.white)
+                            : null,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showLabelPicker() async {
+    if (widget.noteId == null && _isNew) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Save the task list first to add labels')),
+      );
+      return;
+    }
+    final noteId = widget.noteId;
+    if (noteId == null) return;
+    final result = await showLabelPickerSheet(context, selected: _noteLabels);
+    if (result == null) return;
+    final dao = ref.read(labelDaoProvider);
+    final newIds = result.map((l) => l.id).toSet();
+    final oldIds = _noteLabels.map((l) => l.id).toSet();
+    for (final id in oldIds.difference(newIds)) await dao.removeLabelFromNote(noteId, id);
+    for (final id in newIds.difference(oldIds)) await dao.assignLabelToNote(noteId, id);
+    final labels = await dao.getLabelsForNote(noteId);
+    if (mounted) setState(() => _noteLabels = labels);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bgColor = _selectedColor != null ? Color(_selectedColor!).withValues(alpha: 0.08) : null;
+    final checkedCount = _itemChecked.values.where((v) => v).length;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
@@ -153,9 +334,25 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
         if (canPop && context.mounted) context.pop();
       },
       child: Scaffold(
+        backgroundColor: bgColor,
         appBar: AppBar(
           title: Text(_isNew ? 'New Task List' : 'Edit Task List'),
           actions: [
+            IconButton(
+              icon: Icon(_isPinned ? Icons.push_pin : Icons.push_pin_outlined),
+              onPressed: () => setState(() => _isPinned = !_isPinned),
+              tooltip: _isPinned ? 'Unpin' : 'Pin',
+            ),
+            IconButton(
+              icon: const Icon(Icons.label_outline),
+              onPressed: _showLabelPicker,
+              tooltip: 'Labels',
+            ),
+            IconButton(
+              icon: const Icon(Icons.palette_outlined),
+              onPressed: _showColorPicker,
+              tooltip: 'Color',
+            ),
             IconButton(
               icon: const Icon(Icons.check),
               onPressed: () async {
@@ -178,7 +375,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
                 ),
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -194,7 +391,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
                           const SizedBox(height: 12),
                           Text(
                             'No items yet',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: Colors.grey.shade500,
                             ),
                           ),
@@ -222,17 +419,38 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
                         _debounceSave();
                       },
                       itemBuilder: (context, index) {
-                        final entry = _itemControllers.entries.elementAt(index);
+                        final sorted = _itemControllers.entries.toList();
+                        if (index >= sorted.length) return const SizedBox.shrink();
+                        final entry = sorted[index];
+                        final id = entry.key;
+                        final isChild = _itemParentId[id] != null;
+                        final children = _childIds(id);
+
                         return _TaskItemTile(
-                          key: ValueKey(entry.key),
+                          key: ValueKey(id),
+                          index: index,
                           controller: entry.value,
-                          focusNode: _itemFocusNodes[entry.key]!,
-                          onDelete: () => _removeItem(entry.key),
+                          focusNode: _itemFocusNodes[id]!,
+                          isChecked: _itemChecked[id] ?? false,
+                          isChild: isChild,
+                          hasChildren: children.isNotEmpty,
+                          onToggleChecked: () => _toggleChecked(id),
+                          onDelete: () => _removeItem(id),
                           onChanged: () => _debounceSave(),
+                          onToggleSubtask: () => _toggleSubtask(id),
+                          onAddSubtask: () => _addItem(parentId: id),
                         );
                       },
                     ),
             ),
+            if (_itemControllers.isNotEmpty)
+              _TaskListFooter(
+                autoSort: _autoSort,
+                checkedCount: checkedCount,
+                totalCount: _itemControllers.length,
+                onToggleAutoSort: () => setState(() => _autoSort = !_autoSort),
+                onRemoveChecked: checkedCount > 0 ? _removeAllChecked : null,
+              ),
           ],
         ),
         floatingActionButton: FloatingActionButton(
@@ -246,52 +464,151 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
 }
 
 class _TaskItemTile extends StatelessWidget {
+  final int index;
   final TextEditingController controller;
   final FocusNode focusNode;
+  final bool isChecked;
+  final bool isChild;
+  final bool hasChildren;
+  final VoidCallback onToggleChecked;
   final VoidCallback onDelete;
   final VoidCallback onChanged;
+  final VoidCallback onToggleSubtask;
+  final VoidCallback onAddSubtask;
 
   const _TaskItemTile({
     super.key,
+    required this.index,
     required this.controller,
     required this.focusNode,
+    required this.isChecked,
+    required this.isChild,
+    required this.hasChildren,
+    required this.onToggleChecked,
     required this.onDelete,
     required this.onChanged,
+    required this.onToggleSubtask,
+    required this.onAddSubtask,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.only(left: isChild ? 40 : 8),
       child: Row(
         children: [
           ReorderableDragStartListener(
-            index: 0,
+            index: index,
             child: const Padding(
               padding: EdgeInsets.all(8),
               child: Icon(Icons.drag_handle, color: Colors.grey),
             ),
           ),
           Checkbox(
-            value: false,
-            onChanged: (_) {},
+            value: isChecked,
+            onChanged: (_) => onToggleChecked(),
           ),
           Expanded(
             child: TextField(
               controller: controller,
               focusNode: focusNode,
               onChanged: (_) => onChanged(),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Task item',
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
+              style: isChecked
+                  ? theme.textTheme.bodyMedium?.copyWith(
+                      decoration: TextDecoration.lineThrough,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                    )
+                  : null,
             ),
+          ),
+          if (hasChildren)
+            Icon(Icons.subdirectory_arrow_right, size: 16, color: Colors.grey.shade400),
+          IconButton(
+            icon: const Icon(Icons.subdirectory_arrow_left, size: 18),
+            onPressed: onToggleSubtask,
+            tooltip: isChild ? 'Unindent' : 'Indent',
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+          ),
+          IconButton(
+            icon: const Icon(Icons.add, size: 18),
+            onPressed: onAddSubtask,
+            tooltip: 'Add subtask',
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
           ),
           IconButton(
             icon: const Icon(Icons.close, size: 18),
             onPressed: onDelete,
             tooltip: 'Remove',
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TaskListFooter extends StatelessWidget {
+  final bool autoSort;
+  final int checkedCount;
+  final int totalCount;
+  final VoidCallback onToggleAutoSort;
+  final VoidCallback? onRemoveChecked;
+
+  const _TaskListFooter({
+    required this.autoSort,
+    required this.checkedCount,
+    required this.totalCount,
+    required this.onToggleAutoSort,
+    this.onRemoveChecked,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: theme.dividerColor)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            '$checkedCount / $totalCount done',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const Spacer(),
+          if (onRemoveChecked != null)
+            TextButton.icon(
+              onPressed: onRemoveChecked,
+              icon: const Icon(Icons.cleaning_services_outlined, size: 16),
+              label: const Text('Remove checked'),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                foregroundColor: theme.colorScheme.error,
+              ),
+            ),
+          const SizedBox(width: 8),
+          Text(
+            'Auto-sort',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          Switch(
+            value: autoSort,
+            onChanged: (_) => onToggleAutoSort(),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ],
       ),

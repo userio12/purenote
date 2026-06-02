@@ -13,6 +13,7 @@ import 'package:purenote/core/services/notification_service.dart';
 import 'package:purenote/core/services/widget_service.dart';
 import 'package:purenote/core/theme/app_theme.dart';
 import 'package:purenote/core/database/database.dart';
+import 'package:purenote/core/database/daos/note_dao.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/providers/settings_provider.dart';
 import 'package:purenote/features/lock/providers/lock_state_provider.dart';
@@ -49,7 +50,9 @@ Future<void> main() async {
       options.enableNdkScopeSync = true;
     },
     appRunner: () async {
-      await NotificationService.init();
+      final db = AppDatabase.noDb();
+      final noteDao = NoteDao(db);
+      await NotificationService.init(dao: noteDao);
       HomeWidget.registerInteractivityCallback(widgetBackgroundCallback);
       await Workmanager().initialize(backupCallbackDispatcher);
       await Workmanager().registerPeriodicTask(

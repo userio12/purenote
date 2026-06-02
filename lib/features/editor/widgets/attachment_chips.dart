@@ -6,6 +6,7 @@ class AttachmentChips extends StatelessWidget {
   final List<Attachment> attachments;
   final AttachmentService service;
   final VoidCallback onAdd;
+  final VoidCallback onAddImage;
   final ValueChanged<Attachment> onDelete;
 
   const AttachmentChips({
@@ -13,6 +14,7 @@ class AttachmentChips extends StatelessWidget {
     required this.attachments,
     required this.service,
     required this.onAdd,
+    required this.onAddImage,
     required this.onDelete,
   });
 
@@ -56,6 +58,11 @@ class AttachmentChips extends StatelessWidget {
                 avatar: const Icon(Icons.add, size: 18),
                 label: const Text('Add', style: TextStyle(fontSize: 13)),
                 onPressed: onAdd,
+              ),
+              ActionChip(
+                avatar: const Icon(Icons.image, size: 18),
+                label: const Text('Image', style: TextStyle(fontSize: 13)),
+                onPressed: onAddImage,
               ),
             ],
           ),

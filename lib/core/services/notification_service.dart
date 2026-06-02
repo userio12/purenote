@@ -10,8 +10,10 @@ class NotificationService {
   static const _channelName = 'Reminders';
   static const _channelDesc = 'Note reminder notifications';
   static bool _tzInitialized = false;
+  static NoteDao? _dao;
 
-  static Future<void> init() async {
+  static Future<void> init({NoteDao? dao}) async {
+    _dao = dao;
     if (!_tzInitialized) {
       tz_data.initializeTimeZones();
       _tzInitialized = true;
@@ -51,6 +53,14 @@ class NotificationService {
   static Future<void> _onNotificationTap(NotificationResponse response) async {
     final payload = response.payload;
     if (payload == null || payload.isEmpty) return;
+
+    if (_dao != null) {
+      final note = await _dao!.getById(payload);
+      if (note == null) {
+        return;
+      }
+    }
+
     rootNavigatorKey.currentState?.pushReplacementNamed('/note/$payload/view');
   }
 
@@ -95,4 +105,3 @@ class NotificationService {
     await _plugin.cancelAll();
   }
 }
-

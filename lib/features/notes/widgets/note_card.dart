@@ -9,6 +9,7 @@ class NoteCard extends StatelessWidget {
   final VoidCallback? onPin;
   final VoidCallback? onDelete;
   final List<Label>? labels;
+  final int attachmentCount;
 
   const NoteCard({
     super.key,
@@ -17,6 +18,7 @@ class NoteCard extends StatelessWidget {
     this.onPin,
     this.onDelete,
     this.labels,
+    this.attachmentCount = 0,
   });
 
   Color? _backgroundColor() {
@@ -126,6 +128,17 @@ class NoteCard extends StatelessWidget {
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
+                  if (attachmentCount > 0) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.attach_file, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+                    const SizedBox(width: 2),
+                    Text(
+                      '$attachmentCount',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   if (onDelete != null)
                     InkWell(
@@ -174,7 +187,9 @@ class NoteCard extends StatelessWidget {
     }
     if (diff.inDays == 1) return 'Yesterday';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${dt.month}/${dt.day}/${dt.year}';
+    final months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (dt.year == now.year) return '${months[dt.month]} ${dt.day}';
+    return '${months[dt.month]} ${dt.day}, ${dt.year}';
   }
 }
 

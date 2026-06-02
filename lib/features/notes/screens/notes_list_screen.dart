@@ -1,67 +1,263 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/providers/settings_provider.dart';
+import 'package:purenote/core/services/notification_service.dart';
 import 'package:purenote/features/notes/providers/notes_provider.dart';
 import 'package:purenote/features/notes/widgets/note_card.dart';
+import 'package:purenote/features/notes/widgets/note_tile.dart';
+import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
 
-class NotesListScreen extends ConsumerWidget {
+class NotesListScreen extends ConsumerStatefulWidget {
   const NotesListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notesAsync = ref.watch(notesStreamProvider);
+  ConsumerState<NotesListScreen> createState() => _NotesListScreenState();
+}
+
+class _NotesListScreenState extends ConsumerState<NotesListScreen> {
+  String? _selectedLabelId;
+  final _selectedIds = <String>{};
+
+  List<Note> _sortNotes(List<Note> notes, AppSettings settings) {
+    final sorted = List<Note>.from(notes);
+    final ascending = settings.sortAscending;
+    switch (settings.sortBy) {
+      case 'title':
+        sorted.sort((a, b) => ascending
+            ? a.title.compareTo(b.title)
+            : b.title.compareTo(a.title));
+        break;
+      case 'created':
+        sorted.sort((a, b) => ascending
+            ? a.createdAt.compareTo(b.createdAt)
+            : b.createdAt.compareTo(a.createdAt));
+        break;
+      default:
+        sorted.sort((a, b) => ascending
+            ? a.updatedAt.compareTo(b.updatedAt)
+            : b.updatedAt.compareTo(a.updatedAt));
+    }
+    return sorted;
+  }
+
+  Future<void> _bulkDelete() async {
+    if (_selectedIds.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete notes'),
+        content: Text('Delete ${_selectedIds.length} note${_selectedIds.length == 1 ? '' : 's'}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      final dao = ref.read(noteDaoProvider);
+      for (final id in _selectedIds) {
+        await NotificationService.cancel(id);
+        await dao.delete(id);
+      }
+      setState(() => _selectedIds.clear());
+    }
+  }
+
+  Future<void> _bulkPin(bool pin) async {
+    final dao = ref.read(noteDaoProvider);
+    for (final id in _selectedIds) {
+      await dao.updateFields(NotesCompanion(
+        id: Value(id),
+        isPinned: Value(pin),
+      ));
+    }
+    setState(() => _selectedIds.clear());
+  }
+
+  Future<void> _bulkLabel() async {
+    final labelDao = ref.read(labelDaoProvider);
+    if (!mounted) return;
+    final result = await showLabelPickerSheet(context, selected: []);
+    if (result != null && mounted) {
+      for (final id in _selectedIds) {
+        for (final label in result) {
+          await labelDao.assignLabelToNote(id, label.id);
+        }
+      }
+      setState(() => _selectedIds.clear());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notesAsync = _selectedLabelId != null
+        ? ref.watch(notesByLabelProvider(_selectedLabelId!))
+        : ref.watch(notesStreamProvider);
     final settings = ref.watch(settingsNotifierProvider);
+    final labelsAsync = ref.watch(allLabelsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notes'),
+        title: _selectedIds.isNotEmpty
+            ? Text('${_selectedIds.length} selected')
+            : const Text('Notes'),
+        leading: _selectedIds.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() => _selectedIds.clear()),
+              )
+            : null,
         actions: [
-          IconButton(
-            icon: Icon(
-              settings.viewMode == 0 ? Icons.grid_view : Icons.list,
+          if (_selectedIds.isNotEmpty) ...[
+            IconButton(
+              icon: const Icon(Icons.push_pin),
+              onPressed: () => _bulkPin(true),
+              tooltip: 'Pin all',
             ),
-            onPressed: () {
-              ref.read(settingsNotifierProvider.notifier).update(
-                settings.copyWith(viewMode: settings.viewMode == 0 ? 1 : 0),
-              );
-            },
-            tooltip: settings.viewMode == 0 ? 'Grid view' : 'List view',
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => context.push('/search'),
-            tooltip: 'Search notes',
-          ),
+            IconButton(
+              icon: const Icon(Icons.label_outline),
+              onPressed: _bulkLabel,
+              tooltip: 'Add label',
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _bulkDelete,
+              tooltip: 'Delete all',
+            ),
+          ] else ...[
+            PopupMenuButton<String>(
+              initialValue: settings.sortBy,
+              icon: const Icon(Icons.sort),
+              tooltip: 'Sort by',
+              onSelected: (value) {
+                if (value == settings.sortBy) {
+                  ref.read(settingsNotifierProvider.notifier).update(
+                    settings.copyWith(sortAscending: !settings.sortAscending),
+                  );
+                } else {
+                  ref.read(settingsNotifierProvider.notifier).update(
+                    settings.copyWith(sortBy: value, sortAscending: false),
+                  );
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'modified',
+                  child: Row(
+                    children: [
+                      if (settings.sortBy == 'modified')
+                        Icon(Icons.check, size: 18, color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(settings.sortBy == 'modified' && settings.sortAscending ? 'Oldest' : 'Latest'),
+                    ],
+                  ),
+                ),
+                PopupMenuDivider(),
+                const PopupMenuItem(value: 'title', child: Text('Title')),
+                const PopupMenuItem(value: 'created', child: Text('Created')),
+                const PopupMenuItem(value: 'modified', child: Text('Modified')),
+              ],
+            ),
+            IconButton(
+              icon: Icon(
+                settings.viewMode == 0 ? Icons.grid_view : Icons.list,
+              ),
+              onPressed: () {
+                ref.read(settingsNotifierProvider.notifier).update(
+                  settings.copyWith(viewMode: settings.viewMode == 0 ? 1 : 0),
+                );
+              },
+              tooltip: settings.viewMode == 0 ? 'Grid view' : 'List view',
+            ),
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () => context.push('/search'),
+              tooltip: 'Search notes',
+            ),
+          ],
         ],
       ),
       body: notesAsync.when(
         data: (notes) {
-          final pinned = notes.where((n) => n.isPinned).toList();
-          final unpinned = notes.where((n) => !n.isPinned).toList();
+          final sorted = _sortNotes(notes, settings);
+          final pinned = sorted.where((n) => n.isPinned).toList();
+          final unpinned = sorted.where((n) => !n.isPinned).toList();
 
           if (notes.isEmpty) {
-            return const _EmptyState();
+            return const _EmptyState(hasFilter: false);
           }
 
-          if (settings.viewMode == 1) {
-            return _GridNotesView(
-              pinned: pinned,
-              unpinned: unpinned,
-              onTap: (note) => context.push('/note/${note.id}'),
-              onPin: (note) => _togglePin(ref, note),
-              onDelete: (note) => _deleteNote(ref, note),
-            );
+          if (sorted.isEmpty) {
+            return _EmptyState(hasFilter: true);
           }
 
-          return _ListNotesView(
-            pinned: pinned,
-            unpinned: unpinned,
-            onTap: (note) => context.push('/note/${note.id}'),
-            onPin: (note) => _togglePin(ref, note),
-            onDelete: (note) => _deleteNote(ref, note),
+          return Column(
+            children: [
+              labelsAsync.when(
+                data: (allLabels) => allLabels.isEmpty
+                    ? const SizedBox.shrink()
+                    : SizedBox(
+                        height: 48,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: FilterChip(
+                                label: const Text('All'),
+                                selected: _selectedLabelId == null,
+                                onSelected: (_) => setState(() => _selectedLabelId = null),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                            ...allLabels.map((label) => Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: FilterChip(
+                                label: Text(label.name),
+                                selected: _selectedLabelId == label.id,
+                                onSelected: (_) => setState(() => _selectedLabelId = _selectedLabelId == label.id ? null : label.id),
+                                visualDensity: VisualDensity.compact,
+                                selectedColor: label.color != null
+                                    ? Color(label.color!).withValues(alpha: 0.2)
+                                    : null,
+                                side: label.color != null
+                                    ? BorderSide(color: Color(label.color!).withValues(alpha: 0.4))
+                                    : null,
+                              ),
+                            )),
+                          ],
+                        ),
+                      ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+              Expanded(
+                child: settings.viewMode == 1
+                    ? _GridNotesView(
+                        pinned: pinned,
+                        unpinned: unpinned,
+                        selectedIds: _selectedIds,
+                        onTap: (note) => _onNoteTap(note),
+                        onLongPress: (note) => _onNoteLongPress(note),
+                        onPin: (note) => _togglePin(note),
+                        onDelete: (note) => _deleteNote(note),
+                      )
+                    : _ListNotesView(
+                        pinned: pinned,
+                        unpinned: unpinned,
+                        selectedIds: _selectedIds,
+                        onTap: (note) => _onNoteTap(note),
+                        onLongPress: (note) => _onNoteLongPress(note),
+                        onPin: (note) => _togglePin(note),
+                        onDelete: (note) => _deleteNote(note),
+                      ),
+              ),
+            ],
           );
         },
         loading: () => ListView.builder(
@@ -71,36 +267,87 @@ class NotesListScreen extends ConsumerWidget {
         ),
         error: (e, _) => _ErrorState(onRetry: () => ref.invalidate(notesStreamProvider)),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/note/new'),
-        tooltip: 'New note',
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _selectedIds.isEmpty
+          ? FloatingActionButton(
+              onPressed: () => context.push('/note/new'),
+              tooltip: 'New note',
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 
-  Future<void> _togglePin(WidgetRef ref, Note note) async {
+  void _onNoteTap(Note note) {
+    if (_selectedIds.isNotEmpty) {
+      setState(() {
+        if (_selectedIds.contains(note.id)) {
+          _selectedIds.remove(note.id);
+        } else {
+          _selectedIds.add(note.id);
+        }
+      });
+      return;
+    }
+    if (note.type == 1) {
+      context.push('/task-list/${note.id}');
+    } else {
+      context.push('/note/${note.id}');
+    }
+  }
+
+  void _onNoteLongPress(Note note) {
+    if (_selectedIds.isEmpty) {
+      setState(() => _selectedIds.add(note.id));
+    }
+  }
+
+  Future<void> _togglePin(Note note) async {
     final dao = ref.read(noteDaoProvider);
     await dao.togglePin(note.id);
   }
 
-  Future<void> _deleteNote(WidgetRef ref, Note note) async {
+  Future<void> _deleteNote(Note note) async {
     final dao = ref.read(noteDaoProvider);
+    final deletedNote = await dao.getById(note.id);
+    await NotificationService.cancel(note.id);
     await dao.delete(note.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Note deleted'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            if (deletedNote != null) {
+              final dao = ref.read(noteDaoProvider);
+              await dao.insert(
+                id: deletedNote.id,
+                createdAt: deletedNote.createdAt,
+                updatedAt: deletedNote.updatedAt,
+              );
+            }
+          },
+        ),
+      ),
+    );
   }
 }
 
 class _ListNotesView extends StatelessWidget {
   final List<Note> pinned;
   final List<Note> unpinned;
+  final Set<String> selectedIds;
   final void Function(Note) onTap;
+  final void Function(Note) onLongPress;
   final void Function(Note) onPin;
   final void Function(Note) onDelete;
 
   const _ListNotesView({
     required this.pinned,
     required this.unpinned,
+    required this.selectedIds,
     required this.onTap,
+    required this.onLongPress,
     required this.onPin,
     required this.onDelete,
   });
@@ -108,7 +355,7 @@ class _ListNotesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
       itemCount: pinned.length + unpinned.length + (pinned.isNotEmpty ? 1 : 0),
       itemBuilder: (context, index) {
         if (pinned.isNotEmpty && index == pinned.length) {
@@ -127,11 +374,27 @@ class _ListNotesView extends StatelessWidget {
             ? pinned[index]
             : unpinned[index - pinned.length - (pinned.isNotEmpty ? 1 : 0)];
 
-        return NoteCard(
-          note: note,
-          onTap: () => onTap(note),
-          onPin: () => onPin(note),
-          onDelete: () => onDelete(note),
+        return Dismissible(
+          key: ValueKey('note_${note.id}'),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            color: Theme.of(context).colorScheme.error,
+            child: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.onError),
+          ),
+          confirmDismiss: (_) async {
+            onDelete(note);
+            return false;
+          },
+          child: NoteTile(
+            note: note,
+            onTap: () => onTap(note),
+            onLongPress: () => onLongPress(note),
+            onPin: () => onPin(note),
+            onDelete: () => onDelete(note),
+            isSelected: selectedIds.contains(note.id),
+          ),
         );
       },
     );
@@ -141,14 +404,18 @@ class _ListNotesView extends StatelessWidget {
 class _GridNotesView extends StatelessWidget {
   final List<Note> pinned;
   final List<Note> unpinned;
+  final Set<String> selectedIds;
   final void Function(Note) onTap;
+  final void Function(Note) onLongPress;
   final void Function(Note) onPin;
   final void Function(Note) onDelete;
 
   const _GridNotesView({
     required this.pinned,
     required this.unpinned,
+    required this.selectedIds,
     required this.onTap,
+    required this.onLongPress,
     required this.onPin,
     required this.onDelete,
   });
@@ -157,7 +424,7 @@ class _GridNotesView extends StatelessWidget {
   Widget build(BuildContext context) {
     final all = [...pinned, ...unpinned];
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 8,
@@ -179,7 +446,8 @@ class _GridNotesView extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  final bool hasFilter;
+  const _EmptyState({required this.hasFilter});
 
   @override
   Widget build(BuildContext context) {
@@ -187,17 +455,21 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.note_outlined, size: 64, color: Colors.grey.shade400),
+          Icon(
+            hasFilter ? Icons.filter_list_off : Icons.note_outlined,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
           const SizedBox(height: 16),
           Text(
-            'No notes yet',
+            hasFilter ? 'No matching notes' : 'No notes yet',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Colors.grey.shade600,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Tap + to create your first note',
+            hasFilter ? 'Try a different filter' : 'Tap + to create your first note',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey.shade500,
             ),

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:file_picker/file_picker.dart';
@@ -16,8 +18,10 @@ import 'package:purenote/core/services/auth_service.dart';
 import 'package:purenote/core/services/encryption_service.dart';
 import 'package:purenote/core/services/notification_service.dart';
 import 'package:purenote/core/theme/app_theme.dart';
+import 'package:purenote/core/utils/delta_utils.dart';
 import 'package:purenote/features/editor/providers/editor_state_provider.dart';
 import 'package:purenote/features/editor/widgets/attachment_chips.dart';
+import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final String? noteId;
@@ -27,7 +31,7 @@ class NoteEditorScreen extends ConsumerStatefulWidget {
   ConsumerState<NoteEditorScreen> createState() => _NoteEditorScreenState();
 }
 
-class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
+class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with WidgetsBindingObserver {
   late QuillController _quillController;
   late TextEditingController _titleController;
   bool _isNew = true;
@@ -35,13 +39,16 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   bool _hasChanges = false;
   String? _currentNoteId;
   List<Attachment> _attachments = [];
+  List<Label> _noteLabels = [];
   AttachmentService? _attachmentService;
   DateTime? _reminderAt;
   bool _isLocked = false;
+  bool _isLoadingLabels = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _quillController = QuillController.basic();
     _titleController = TextEditingController();
     _isNew = widget.noteId == null;
@@ -65,15 +72,24 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (!_isNew) {
       _loadNote();
     }
+    _checkDraft();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _saveTimer?.cancel();
     _quillController.dispose();
     _titleController.dispose();
     ref.read(editorStateProvider.notifier).reset();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      if (_hasChanges) _save();
+    }
   }
 
   void _debounceSave() {
@@ -131,6 +147,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           });
         } catch (_) {}
       }
+      _loadLabels();
+      _checkDraft();
     }
   }
 
@@ -188,6 +206,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         _currentNoteId = id;
         _attachmentService ??= AttachmentService(ref.read(attachmentDaoProvider));
         _loadAttachments();
+        _deleteDraft();
 
         if (_reminderAt != null) {
           await NotificationService.schedule(dao, id, _titleController.text, _reminderAt!);
@@ -222,7 +241,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (result == null || result.files.isEmpty) return;
     final path = result.files.single.path;
     if (path == null) return;
+    await _attachFile(path, result.files.single.extension != null
+        ? 'application/${result.files.single.extension}'
+        : null);
+  }
 
+  Future<void> _attachFile(String path, String? mimeType) async {
     final id = _currentNoteId;
     if (id == null) {
       if (mounted) {
@@ -238,9 +262,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     final attachResult = await service.attachFile(
       noteId: id,
       sourceFile: file,
-      mimeType: result.files.single.extension != null
-          ? 'application/${result.files.single.extension}'
-          : null,
+      mimeType: mimeType,
     );
 
     if (attachResult is Ok && mounted) {
@@ -264,6 +286,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   Future<bool> _onWillPop() async {
     if (!_hasChanges) return true;
+    await _saveDraft();
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -373,6 +396,101 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     return pin;
   }
 
+  Future<void> _loadLabels() async {
+    if (widget.noteId == null) return;
+    setState(() => _isLoadingLabels = true);
+    final labels = await ref.read(labelDaoProvider).getLabelsForNote(widget.noteId!);
+    if (mounted) setState(() { _noteLabels = labels; _isLoadingLabels = false; });
+  }
+
+  Future<void> _showLabelPicker() async {
+    final result = await showLabelPickerSheet(context, selected: _noteLabels);
+    if (result == null || widget.noteId == null) return;
+    final dao = ref.read(labelDaoProvider);
+    final newIds = result.map((l) => l.id).toSet();
+    final oldIds = _noteLabels.map((l) => l.id).toSet();
+    final toRemove = oldIds.difference(newIds);
+    final toAdd = newIds.difference(oldIds);
+    for (final id in toRemove) await dao.removeLabelFromNote(widget.noteId!, id);
+    for (final id in toAdd) await dao.assignLabelToNote(widget.noteId!, id);
+    _loadLabels();
+    _debounceSave();
+  }
+
+  Future<void> _shareNote() async {
+    final title = _titleController.text;
+    final content = stripQuillDelta(jsonEncode(_quillController.document.toDelta().toJson()));
+    await Share.share('$title\n\n$content');
+  }
+
+  Future<void> _checkDraft() async {
+    if (widget.noteId == null) return;
+    final dir = await getTemporaryDirectory();
+    final draftFile = File('${dir.path}/draft_${widget.noteId}.json');
+    if (!await draftFile.exists()) return;
+    if (!mounted) return;
+    final restore = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Recover draft?'),
+        content: const Text('An unsaved draft was found from a previous session. Would you like to restore it?'),
+        actions: [
+          TextButton(
+            onPressed: () async { await draftFile.delete(); Navigator.pop(ctx, false); },
+            child: const Text('Discard'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+    if (restore != true || !mounted) return;
+    try {
+      final data = await draftFile.readAsString();
+      final draft = jsonDecode(data) as Map<String, dynamic>;
+      _titleController.text = draft['title'] as String? ?? '';
+      final delta = draft['content'] as List?;
+      if (delta != null) {
+        final doc = Document.fromJson(delta.cast<Map<String, dynamic>>());
+        setState(() {
+          _quillController = QuillController(
+            document: doc,
+            selection: const TextSelection.collapsed(offset: 0),
+          );
+          _hasChanges = true;
+        });
+        ref.read(editorStateProvider.notifier).markDirty();
+      }
+      await draftFile.delete();
+    } catch (_) {}
+  }
+
+  Future<void> _saveDraft() async {
+    if (widget.noteId == null) return;
+    final dir = await getTemporaryDirectory();
+    final draftFile = File('${dir.path}/draft_${widget.noteId}.json');
+    final delta = _quillController.document.toDelta().toJson();
+    final draft = jsonEncode({'title': _titleController.text, 'content': delta});
+    await draftFile.writeAsString(draft);
+  }
+
+  Future<void> _deleteDraft() async {
+    if (widget.noteId == null) return;
+    final dir = await getTemporaryDirectory();
+    final draftFile = File('${dir.path}/draft_${widget.noteId}.json');
+    if (await draftFile.exists()) await draftFile.delete();
+  }
+
+  Future<void> _pickImage() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (result == null || result.files.isEmpty) return;
+    final path = result.files.single.path;
+    if (path == null) return;
+    await _attachFile(path, result.files.single.extension != null ? 'image/${result.files.single.extension}' : 'image/*');
+  }
+
   void _showReminderPicker() {
     showModalBottomSheet(
       context: context,
@@ -461,6 +579,11 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           ),
           actions: [
             IconButton(
+              icon: const Icon(Icons.label_outline),
+              onPressed: _showLabelPicker,
+              tooltip: 'Labels',
+            ),
+            IconButton(
               icon: const Icon(Icons.palette_outlined),
               onPressed: _showColorPicker,
               tooltip: 'Color',
@@ -478,6 +601,11 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               ),
               onPressed: _showReminderPicker,
               tooltip: 'Reminder',
+            ),
+            IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: _shareNote,
+              tooltip: 'Share',
             ),
             IconButton(
               icon: const Icon(Icons.mic_outlined),
@@ -506,6 +634,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: TextField(
                 controller: _titleController,
+                autofocus: _isNew,
                 decoration: const InputDecoration(
                   hintText: 'Title',
                   border: InputBorder.none,
@@ -559,6 +688,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                 attachments: _attachments,
                 service: AttachmentService(ref.read(attachmentDaoProvider)),
                 onAdd: _pickFile,
+                onAddImage: _pickImage,
                 onDelete: _deleteAttachment,
               ),
             _SaveStatusBar(saveStatus: saveStatus),

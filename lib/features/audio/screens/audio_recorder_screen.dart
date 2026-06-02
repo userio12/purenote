@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/services/attachment_service.dart';
+import 'package:purenote/features/audio/widgets/audio_player_widget.dart';
 
 class AudioRecorderScreen extends ConsumerStatefulWidget {
   final String noteId;
@@ -19,19 +21,37 @@ class AudioRecorderScreen extends ConsumerStatefulWidget {
   ConsumerState<AudioRecorderScreen> createState() => _AudioRecorderScreenState();
 }
 
-class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> {
+class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> with WidgetsBindingObserver {
   final _recorder = AudioRecorder();
   bool _isRecording = false;
   bool _isPaused = false;
   int _recordDuration = 0;
   Timer? _timer;
+  Timer? _ampTimer;
   String? _recordedPath;
+  final _amplitudes = <double>[];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _ampTimer?.cancel();
     _recorder.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused && _isRecording) {
+      if (_isPaused) return;
+      _pauseRecording();
+    }
   }
 
   Future<bool> _hasPermission() async {
@@ -62,16 +82,31 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> {
       if (mounted) setState(() => _recordDuration++);
     });
 
+    _ampTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
+      try {
+        final amp = await _recorder.getAmplitude();
+        final normalized = min(1.0, max(0.0, (amp.current + 60) / 60));
+        if (mounted && _isRecording) {
+          setState(() {
+            _amplitudes.add(normalized);
+            if (_amplitudes.length > 60) _amplitudes.removeAt(0);
+          });
+        }
+      } catch (_) {}
+    });
+
     setState(() {
       _isRecording = true;
       _isPaused = false;
       _recordDuration = 0;
+      _amplitudes.clear();
     });
   }
 
   Future<void> _pauseRecording() async {
     await _recorder.pause();
     _timer?.cancel();
+    _ampTimer?.cancel();
     setState(() => _isPaused = true);
   }
 
@@ -80,16 +115,30 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _recordDuration++);
     });
+    _ampTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
+      try {
+        final amp = await _recorder.getAmplitude();
+        final normalized = min(1.0, max(0.0, (amp.current + 60) / 60));
+        if (mounted && _isRecording) {
+          setState(() {
+            _amplitudes.add(normalized);
+            if (_amplitudes.length > 60) _amplitudes.removeAt(0);
+          });
+        }
+      } catch (_) {}
+    });
     setState(() => _isPaused = false);
   }
 
   Future<void> _stopRecording() async {
     _timer?.cancel();
+    _ampTimer?.cancel();
     final path = await _recorder.stop();
     setState(() {
       _isRecording = false;
       _isPaused = false;
       _recordedPath = path;
+      _amplitudes.clear();
     });
   }
 
@@ -113,7 +162,19 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> {
     }
   }
 
-  void _discard() async {
+  Future<void> _discard() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Discard recording?'),
+        content: const Text('This recording will be permanently deleted.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Discard')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     if (_recordedPath != null) {
       final file = File(_recordedPath!);
       if (await file.exists()) await file.delete();
@@ -135,7 +196,7 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> {
       appBar: AppBar(
         title: const Text('Record Audio'),
         actions: [
-          if (_recordedPath != null)
+          if (_recordedPath != null && !_isRecording)
             IconButton(
               icon: const Icon(Icons.check),
               onPressed: _saveRecording,
@@ -160,6 +221,16 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> {
                 fontWeight: FontWeight.w300,
               ),
             ),
+            if (_isRecording && _amplitudes.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 40,
+                child: CustomPaint(
+                  size: Size(MediaQuery.of(context).size.width * 0.6, 40),
+                  painter: _WaveformPainter(_amplitudes, theme.colorScheme.primary),
+                ),
+              ),
+            ],
             const SizedBox(height: 40),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -188,6 +259,18 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> {
                 ],
               ],
             ),
+            if (_recordedPath != null && !_isRecording) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                ),
+                child: NoteAudioPlayer(filePath: _recordedPath!, dense: true),
+              ),
+            ],
             if (_isRecording || _recordedPath != null) ...[
               const SizedBox(height: 24),
               TextButton.icon(
@@ -204,4 +287,31 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> {
       ),
     );
   }
+}
+
+class _WaveformPainter extends CustomPainter {
+  final List<double> amplitudes;
+  final Color color;
+
+  _WaveformPainter(this.amplitudes, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (amplitudes.isEmpty) return;
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.6)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+
+    final barWidth = size.width / amplitudes.length;
+    for (var i = 0; i < amplitudes.length; i++) {
+      final barHeight = max(2.0, amplitudes[i] * size.height);
+      final x = i * barWidth;
+      final y = (size.height - barHeight) / 2;
+      canvas.drawLine(Offset(x, y + barHeight), Offset(x, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WaveformPainter old) => true;
 }
