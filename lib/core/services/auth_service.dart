@@ -93,8 +93,10 @@ class AuthService {
       case 'both':
         final bio = await authenticateBiometric();
         if (bio) return true;
+        if (!context.mounted) return false;
         return _showPinDialog(context);
       case 'pin':
+        if (!context.mounted) return false;
         return _showPinDialog(context);
       default:
         return true;

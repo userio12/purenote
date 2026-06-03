@@ -44,8 +44,12 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
   void dispose() {
     _saveTimer?.cancel();
     _titleController.dispose();
-    for (final c in _itemControllers.values) c.dispose();
-    for (final f in _itemFocusNodes.values) f.dispose();
+    for (final c in _itemControllers.values) {
+      c.dispose();
+    }
+    for (final f in _itemFocusNodes.values) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -97,7 +101,9 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
       _itemFocusNodes.remove(id);
       _itemChecked.remove(id);
       _itemParentId.remove(id);
-      for (final cid in childIds) _itemParentId[cid] = null;
+      for (final cid in childIds) {
+        _itemParentId[cid] = null;
+      }
     });
     _debounceSave();
   }
@@ -138,7 +144,9 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
         _itemFocusNodes.remove(id);
         _itemChecked.remove(id);
         _itemParentId.remove(id);
-        for (final cid in childIds) _itemParentId[cid] = null;
+        for (final cid in childIds) {
+        _itemParentId[cid] = null;
+      }
       }
     });
     _debounceSave();
@@ -327,8 +335,12 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
     final dao = ref.read(labelDaoProvider);
     final newIds = result.map((l) => l.id).toSet();
     final oldIds = _noteLabels.map((l) => l.id).toSet();
-    for (final id in oldIds.difference(newIds)) await dao.removeLabelFromNote(noteId, id);
-    for (final id in newIds.difference(oldIds)) await dao.assignLabelToNote(noteId, id);
+    for (final id in oldIds.difference(newIds)) {
+      await dao.removeLabelFromNote(noteId, id);
+    }
+    for (final id in newIds.difference(oldIds)) {
+      await dao.assignLabelToNote(noteId, id);
+    }
     final labels = await dao.getLabelsForNote(noteId);
     if (mounted) setState(() => _noteLabels = labels);
   }

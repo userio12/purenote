@@ -58,9 +58,9 @@ class NotificationService {
     if (_dao != null) {
       final note = await _dao!.getById(payload);
       if (note == null) {
-        final context = rootNavigatorKey.currentContext;
-        if (context != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        final navCtx = rootNavigatorKey.currentContext;
+        if (navCtx != null && navCtx.mounted) {
+          ScaffoldMessenger.of(navCtx).showSnackBar(
             const SnackBar(content: Text('This note has been deleted')),
           );
         }

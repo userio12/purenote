@@ -44,7 +44,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
   AttachmentService? _attachmentService;
   DateTime? _reminderAt;
   bool _isLocked = false;
-  bool _isLoadingLabels = false;
 
   @override
   void initState() {
@@ -288,6 +287,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
   Future<bool> _onWillPop() async {
     if (!_hasChanges) return true;
     await _saveDraft();
+    if (!mounted) return true;
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -399,9 +399,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
 
   Future<void> _loadLabels() async {
     if (widget.noteId == null) return;
-    setState(() => _isLoadingLabels = true);
     final labels = await ref.read(labelDaoProvider).getLabelsForNote(widget.noteId!);
-    if (mounted) setState(() { _noteLabels = labels; _isLoadingLabels = false; });
+    if (mounted) setState(() => _noteLabels = labels);
   }
 
   Future<void> _showLabelPicker() async {
@@ -412,8 +411,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
     final oldIds = _noteLabels.map((l) => l.id).toSet();
     final toRemove = oldIds.difference(newIds);
     final toAdd = newIds.difference(oldIds);
-    for (final id in toRemove) await dao.removeLabelFromNote(widget.noteId!, id);
-    for (final id in toAdd) await dao.assignLabelToNote(widget.noteId!, id);
+    for (final id in toRemove) {
+      await dao.removeLabelFromNote(widget.noteId!, id);
+    }
+    for (final id in toAdd) {
+      await dao.assignLabelToNote(widget.noteId!, id);
+    }
     _loadLabels();
     _debounceSave();
   }
@@ -437,7 +440,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
         content: const Text('An unsaved draft was found from a previous session. Would you like to restore it?'),
         actions: [
           TextButton(
-            onPressed: () async { await draftFile.delete(); Navigator.pop(ctx, false); },
+            onPressed: () async {
+              await draftFile.delete();
+              if (ctx.mounted) Navigator.pop(ctx, false);
+            },
             child: const Text('Discard'),
           ),
           FilledButton(

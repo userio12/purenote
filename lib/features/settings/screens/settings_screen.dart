@@ -211,6 +211,7 @@ class SettingsScreen extends ConsumerWidget {
               onTap: () async {
                 final dao = ref.read(labelDaoProvider);
                 final allLabels = await dao.watchAll().first;
+                if (!context.mounted) return;
                 final result = await showLabelPickerSheet(
                   context,
                   selected: allLabels.where((l) => l.id == settings.widgetLabel).toList(),
