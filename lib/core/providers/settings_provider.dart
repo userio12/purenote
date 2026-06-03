@@ -17,9 +17,10 @@ class AppSettings {
   final String backupInterval; // 'daily', 'weekly', 'monthly'
   final bool backupIncludeFiles;
   final bool backupPasswordProtected;
-  final String widgetSource; // 'pinned', 'all'
+  final String widgetSource; // 'pinned', 'all', 'label'
   final int widgetMaxItems; // 3, 5, 10
   final String widgetTheme; // 'match', 'light', 'dark'
+  final String? widgetLabel; // label ID when source is 'label'
 
   const AppSettings({
     this.themeMode = ThemeMode.system,
@@ -37,6 +38,7 @@ class AppSettings {
     this.widgetSource = 'pinned',
     this.widgetMaxItems = 5,
     this.widgetTheme = 'match',
+    this.widgetLabel,
   });
 
   AppSettings copyWith({
@@ -55,6 +57,7 @@ class AppSettings {
     String? widgetSource,
     int? widgetMaxItems,
     String? widgetTheme,
+    String? widgetLabel,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -72,6 +75,7 @@ class AppSettings {
       widgetSource: widgetSource ?? this.widgetSource,
       widgetMaxItems: widgetMaxItems ?? this.widgetMaxItems,
       widgetTheme: widgetTheme ?? this.widgetTheme,
+      widgetLabel: widgetLabel ?? this.widgetLabel,
     );
   }
 
@@ -91,6 +95,7 @@ class AppSettings {
     'widgetSource': widgetSource,
     'widgetMaxItems': widgetMaxItems.toString(),
     'widgetTheme': widgetTheme,
+    'widgetLabel': widgetLabel ?? '',
   };
 
   factory AppSettings.fromMap(Map<String, String> map) {
@@ -110,6 +115,7 @@ class AppSettings {
       widgetSource: map['widgetSource'] ?? 'pinned',
       widgetMaxItems: int.tryParse(map['widgetMaxItems'] ?? '5') ?? 5,
       widgetTheme: map['widgetTheme'] ?? 'match',
+      widgetLabel: map['widgetLabel']?.isNotEmpty == true ? map['widgetLabel'] : null,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:pointycastle/export.dart';
 import 'package:drift/drift.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -186,8 +187,14 @@ class ImportService {
     if (duplicateHandling == DuplicateHandling.skip) {
       final all = await _noteDao.getAll();
       final json = jsonEncode(delta);
-      final match = all.where((n) => n.title == title && n.content == json).firstOrNull;
-      if (match != null) return false;
+      final digest = sha256Digest('$title|$json');
+      final match = all.where((n) => n.content == 'sha256:$digest').isNotEmpty;
+      if (match) return false;
+      for (final note in all) {
+        if (sha256Digest('${note.title}|${note.content}') == digest) {
+          return false;
+        }
+      }
     }
 
     final noteId = id ?? const Uuid().v4();
@@ -203,6 +210,12 @@ class ImportService {
       return true;
     }
     return false;
+  }
+
+  String sha256Digest(String input) {
+    final digest = SHA256Digest();
+    final hash = digest.process(Uint8List.fromList(utf8.encode(input)));
+    return hash.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
 
   Future<void> _importTags(List<String> tagNames, String noteId) async {

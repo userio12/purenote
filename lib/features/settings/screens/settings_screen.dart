@@ -7,6 +7,7 @@ import 'package:purenote/core/services/auth_service.dart';
 import 'package:purenote/core/services/widget_service.dart';
 import 'package:purenote/features/lock/screens/pin_setup_screen.dart';
 import 'package:purenote/features/lock/screens/pin_change_screen.dart';
+import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -180,23 +181,47 @@ class SettingsScreen extends ConsumerWidget {
           _sectionHeader(context, 'Widget'),
           ListTile(
             title: const Text('Source'),
-            subtitle: Text(settings.widgetSource == 'pinned' ? 'Pinned notes' : 'All notes'),
+            subtitle: Text(settings.widgetSource == 'pinned'
+                ? 'Pinned notes'
+                : settings.widgetSource == 'label'
+                    ? 'Specific label'
+                    : 'All notes'),
             trailing: DropdownButton<String>(
               value: settings.widgetSource,
               underline: const SizedBox(),
               items: const [
                 DropdownMenuItem(value: 'pinned', child: Text('Pinned notes')),
                 DropdownMenuItem(value: 'all', child: Text('All notes')),
+                DropdownMenuItem(value: 'label', child: Text('Specific label')),
               ],
               onChanged: (v) {
                 if (v != null) {
                   ref.read(settingsNotifierProvider.notifier).update(
-                    settings.copyWith(widgetSource: v),
+                    settings.copyWith(widgetSource: v, widgetLabel: v == 'label' ? settings.widgetLabel : null),
                   );
                 }
               },
             ),
           ),
+          if (settings.widgetSource == 'label')
+            ListTile(
+              title: const Text('Label'),
+              subtitle: Text(settings.widgetLabel ?? 'Select a label'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                final dao = ref.read(labelDaoProvider);
+                final allLabels = await dao.watchAll().first;
+                final result = await showLabelPickerSheet(
+                  context,
+                  selected: allLabels.where((l) => l.id == settings.widgetLabel).toList(),
+                );
+                if (result != null && result.isNotEmpty) {
+                  ref.read(settingsNotifierProvider.notifier).update(
+                    settings.copyWith(widgetLabel: result.first.id),
+                  );
+                }
+              },
+            ),
           ListTile(
             title: const Text('Max items'),
             trailing: DropdownButton<int>(
@@ -302,13 +327,16 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _refreshWidget(BuildContext context, WidgetRef ref) {
-    final dao = ref.read(noteDaoProvider);
+    final noteDao = ref.read(noteDaoProvider);
+    final labelDao = ref.read(labelDaoProvider);
     final settings = ref.read(settingsNotifierProvider);
     WidgetService.updateWidgetData(
-      dao,
+      noteDao,
+      labelDao: labelDao,
       widgetSource: settings.widgetSource,
       widgetMaxItems: settings.widgetMaxItems,
       widgetTheme: settings.widgetTheme,
+      widgetLabel: settings.widgetLabel,
     );
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Widget updated')),

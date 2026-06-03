@@ -4,6 +4,7 @@ import 'package:archive/archive.dart';
 import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/services/encryption_service.dart';
 
@@ -120,6 +121,13 @@ class BackupService {
     await _logBackup(backupPath, encoded.length, 0, null);
     await _pruneOldBackups();
 
+    Sentry.addBreadcrumb(Breadcrumb(
+      message: 'Backup created',
+      category: 'backup',
+      level: SentryLevel.info,
+      data: {'path': backupPath, 'size': encoded.length, 'passwordProtected': password != null},
+    ));
+
     return backupPath;
   }
 
@@ -167,6 +175,12 @@ class BackupService {
       return content;
     }
 
+    final manifestRaw = readEntry('manifest.json');
+    final manifest = jsonDecode(manifestRaw) as Map<String, dynamic>;
+    if ((manifest['version'] as int? ?? 0) > 1) {
+      throw Exception('Backup format version ${manifest['version']} is newer than supported (1)');
+    }
+
     final notes = jsonDecode(readEntry('notes.json')) as List;
     final labels = jsonDecode(readEntry('labels.json')) as List;
     final noteLabels = jsonDecode(readEntry('note_labels.json')) as List;
@@ -187,7 +201,7 @@ class BackupService {
           id: n['id'] as String,
           createdAt: n['createdAt'] as int,
           updatedAt: n['updatedAt'] as int,
-        )..copyWith(
+        ).copyWith(
           type: Value(n['type'] as int? ?? 0),
           title: Value(n['title'] as String? ?? ''),
           content: Value(n['content'] as String? ?? ''),
@@ -204,7 +218,7 @@ class BackupService {
         batch.insert(_db.labels, LabelsCompanion.insert(
           id: l['id'] as String,
           name: l['name'] as String,
-        )..copyWith(color: Value(l['color'] as int?)));
+        ).copyWith(color: Value(l['color'] as int?)));
       }
 
       for (final nl in noteLabels) {
@@ -229,7 +243,7 @@ class BackupService {
         batch.insert(_db.taskItems, TaskItemsCompanion.insert(
           id: t['id'] as String,
           noteId: t['noteId'] as String,
-        )..copyWith(
+        ).copyWith(
           content: Value(t['content'] as String? ?? ''),
           isChecked: Value(t['isChecked'] as bool? ?? false),
           parentId: Value(t['parentId'] as String?),

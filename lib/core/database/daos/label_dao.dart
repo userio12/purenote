@@ -59,6 +59,13 @@ class LabelDao {
 
   Future<List<Label>> getAll() => _db.select(_db.labels).get();
 
+  Future<List<String>> getNoteIdsForLabel(String labelId) async {
+    final query = _db.select(_db.noteLabels)
+      ..where((n) => n.labelId.equals(labelId));
+    final rows = await query.get();
+    return rows.map((r) => r.noteId).toList();
+  }
+
   Future<List<Label>> getLabelsForNote(String noteId) async {
     final query = _db.select(_db.labels).join(
       [

@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
 import 'package:purenote/core/providers/database_provider.dart';
+import 'package:purenote/core/services/auth_service.dart';
 import 'package:purenote/core/services/notification_service.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
 import 'package:purenote/features/notes/providers/notes_provider.dart';
@@ -39,6 +40,9 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
 
   Future<void> _toggleLock(Note note, NoteDao dao) async {
     if (note.isLocked) {
+      final authService = AuthService();
+      final verified = await authService.authenticateWithContext(context);
+      if (!verified || !mounted) return;
       await dao.updateFields(NotesCompanion(
         id: Value(note.id),
         isLocked: const Value(false),

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
 import 'package:purenote/core/routing/app_router.dart';
@@ -57,6 +58,12 @@ class NotificationService {
     if (_dao != null) {
       final note = await _dao!.getById(payload);
       if (note == null) {
+        final context = rootNavigatorKey.currentContext;
+        if (context != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('This note has been deleted')),
+          );
+        }
         return;
       }
     }
@@ -103,5 +110,22 @@ class NotificationService {
 
   static Future<void> cancelAll() async {
     await _plugin.cancelAll();
+  }
+
+  static Future<void> rescheduleAll(NoteDao dao) async {
+    try {
+      final notes = await dao.getAll();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      for (final note in notes) {
+        if (note.reminderAt != null && note.reminderAt! > now) {
+          await schedule(
+            dao,
+            note.id,
+            note.title,
+            DateTime.fromMillisecondsSinceEpoch(note.reminderAt!),
+          );
+        }
+      }
+    } catch (_) {}
   }
 }

@@ -1,5 +1,6 @@
 import 'package:home_widget/home_widget.dart';
 import 'package:purenote/core/database/database.dart';
+import 'package:purenote/core/database/daos/label_dao.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
 
@@ -11,18 +12,24 @@ class WidgetService {
   static const _themeKey = 'widgetTheme';
 
   static Future<void> updateWidgetData(
-    NoteDao dao, {
+    NoteDao noteDao, {
+    LabelDao? labelDao,
     String widgetSource = 'pinned',
     int widgetMaxItems = 5,
     String widgetTheme = 'match',
+    String? widgetLabel,
   }) async {
     try {
       List<Note> notes;
       if (widgetSource == 'pinned') {
-        notes = await dao.getAll();
+        notes = await noteDao.getAll();
         notes = notes.where((n) => n.isPinned).toList();
+      } else if (widgetSource == 'label' && widgetLabel != null && labelDao != null) {
+        notes = await noteDao.getAll();
+        final labeledNoteIds = await labelDao.getNoteIdsForLabel(widgetLabel);
+        notes = notes.where((n) => labeledNoteIds.contains(n.id)).toList();
       } else {
-        notes = await dao.getAll();
+        notes = await noteDao.getAll();
       }
       final nonEmpty = notes.where((n) => n.content.isNotEmpty || n.title.isNotEmpty).toList();
       nonEmpty.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));

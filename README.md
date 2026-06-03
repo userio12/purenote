@@ -100,7 +100,7 @@ Tests mirror the `lib/` structure under `test/`. DAO tests use in-memory SQLite 
 
 ```bash
 flutter test
-# 79 tests covering: DAOs, encryption, parsers, converters, widgets, providers
+# 95 tests covering: DAOs, encryption, parsers, converters, widgets, providers, import enums, Result type
 ```
 
 ## License

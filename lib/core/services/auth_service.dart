@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:pointycastle/export.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 class AuthService {
   static const _storage = FlutterSecureStorage();
@@ -75,6 +77,65 @@ class AuthService {
     await _storage.delete(key: _pinHashKey);
     await _storage.delete(key: _pinSaltKey);
     await _storage.delete(key: _lockMethodKey);
+  }
+
+  Future<bool> authenticateWithContext(BuildContext context) async {
+    final method = await getLockMethod();
+    Sentry.addBreadcrumb(Breadcrumb(
+      message: 'Auth attempt',
+      category: 'auth',
+      level: SentryLevel.info,
+      data: {'method': method ?? 'none'},
+    ));
+    switch (method) {
+      case 'biometric':
+        return authenticateBiometric();
+      case 'both':
+        final bio = await authenticateBiometric();
+        if (bio) return true;
+        return _showPinDialog(context);
+      case 'pin':
+        return _showPinDialog(context);
+      default:
+        return true;
+    }
+  }
+
+  Future<bool> _showPinDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    try {
+      final pin = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Enter PIN'),
+          content: TextField(
+            controller: controller,
+            obscureText: true,
+            maxLength: 6,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'PIN',
+              counterText: '',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(null),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text),
+              child: const Text('Unlock'),
+            ),
+          ],
+        ),
+      );
+      if (pin == null || pin.isEmpty) return false;
+      return await verifyPin(pin);
+    } finally {
+      controller.dispose();
+    }
   }
 
   String _hash(String pin, List<int> salt) {

@@ -24,6 +24,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
   final _itemFocusNodes = <String, FocusNode>{};
   final _itemChecked = <String, bool>{};
   final _itemParentId = <String, String?>{};
+  final _expandedItems = <String>{};
   bool _isNew = true;
   Timer? _saveTimer;
   int? _selectedColor;
@@ -159,6 +160,18 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
       }
     }
     return [...unchecked, ...checked];
+  }
+
+  List<MapEntry<String, int>> _visibleItems() {
+    final sorted = _sortedItems();
+    final hiddenParents = <String>{};
+    for (final entry in sorted) {
+      final parentId = _itemParentId[entry.key];
+      if (parentId != null && !_expandedItems.contains(parentId)) {
+        hiddenParents.add(entry.key);
+      }
+    }
+    return sorted.where((e) => !hiddenParents.contains(e.key)).toList();
   }
 
   List<String> _childIds(String parentId) {
@@ -406,39 +419,53 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
                     )
                   : ReorderableListView.builder(
                       padding: const EdgeInsets.only(bottom: 80),
-                      itemCount: _itemControllers.length,
+                      itemCount: _visibleItems().length,
                       onReorder: (oldIndex, newIndex) {
                         setState(() {
+                          final visible = _visibleItems();
+                          if (oldIndex >= visible.length || newIndex >= visible.length) return;
                           final entries = _itemControllers.entries.toList();
-                          final item = entries.removeAt(oldIndex);
-                          entries.insert(newIndex, item);
+                          final keys = visible.map((e) => e.key).toList();
+                          final item = keys.removeAt(oldIndex);
+                          keys.insert(newIndex, item);
                           _itemControllers
                             ..clear()
-                            ..addEntries(entries);
+                            ..addEntries(entries.where((e) => keys.contains(e.key)));
                         });
                         _debounceSave();
                       },
                       itemBuilder: (context, index) {
-                        final sorted = _itemControllers.entries.toList();
+                        final sorted = _visibleItems();
                         if (index >= sorted.length) return const SizedBox.shrink();
                         final entry = sorted[index];
                         final id = entry.key;
                         final isChild = _itemParentId[id] != null;
                         final children = _childIds(id);
+                        final isExpanded = _expandedItems.contains(id);
 
                         return _TaskItemTile(
                           key: ValueKey(id),
                           index: index,
-                          controller: entry.value,
+                          controller: _itemControllers[id]!,
                           focusNode: _itemFocusNodes[id]!,
                           isChecked: _itemChecked[id] ?? false,
                           isChild: isChild,
                           hasChildren: children.isNotEmpty,
+                          isExpanded: isExpanded,
                           onToggleChecked: () => _toggleChecked(id),
                           onDelete: () => _removeItem(id),
                           onChanged: () => _debounceSave(),
                           onToggleSubtask: () => _toggleSubtask(id),
                           onAddSubtask: () => _addItem(parentId: id),
+                          onToggleExpand: () {
+                            setState(() {
+                              if (isExpanded) {
+                                _expandedItems.remove(id);
+                              } else {
+                                _expandedItems.add(id);
+                              }
+                            });
+                          },
                         );
                       },
                     ),
@@ -470,11 +497,13 @@ class _TaskItemTile extends StatelessWidget {
   final bool isChecked;
   final bool isChild;
   final bool hasChildren;
+  final bool isExpanded;
   final VoidCallback onToggleChecked;
   final VoidCallback onDelete;
   final VoidCallback onChanged;
   final VoidCallback onToggleSubtask;
   final VoidCallback onAddSubtask;
+  final VoidCallback onToggleExpand;
 
   const _TaskItemTile({
     super.key,
@@ -484,11 +513,13 @@ class _TaskItemTile extends StatelessWidget {
     required this.isChecked,
     required this.isChild,
     required this.hasChildren,
+    required this.isExpanded,
     required this.onToggleChecked,
     required this.onDelete,
     required this.onChanged,
     required this.onToggleSubtask,
     required this.onAddSubtask,
+    required this.onToggleExpand,
   });
 
   @override
@@ -528,7 +559,13 @@ class _TaskItemTile extends StatelessWidget {
             ),
           ),
           if (hasChildren)
-            Icon(Icons.subdirectory_arrow_right, size: 16, color: Colors.grey.shade400),
+            IconButton(
+              icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more, size: 18),
+              onPressed: onToggleExpand,
+              tooltip: isExpanded ? 'Collapse subtasks' : 'Expand subtasks',
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              padding: EdgeInsets.zero,
+            ),
           IconButton(
             icon: const Icon(Icons.subdirectory_arrow_left, size: 18),
             onPressed: onToggleSubtask,

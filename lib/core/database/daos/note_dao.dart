@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/error/app_error.dart';
@@ -44,6 +45,7 @@ class NoteDao {
         createdAt: createdAt,
         updatedAt: updatedAt,
       ));
+      Sentry.addBreadcrumb(Breadcrumb(message: 'Note created', category: 'note', level: SentryLevel.info));
       return Ok(note);
     } catch (e, s) {
       ErrorLogger.logError('Failed to insert note', error: e, stackTrace: s);
@@ -74,6 +76,7 @@ class NoteDao {
   Future<Result<void>> delete(String id) async {
     try {
       await (_db.delete(_db.notes)..where((n) => n.id.equals(id))).go();
+      Sentry.addBreadcrumb(Breadcrumb(message: 'Note deleted', category: 'note', level: SentryLevel.info));
       return const Ok(null);
     } catch (e, s) {
       ErrorLogger.logError('Failed to delete note', error: e, stackTrace: s);

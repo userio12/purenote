@@ -1,9 +1,6 @@
-import 'dart:io';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
+import 'connection.dart';
 
 part 'database.g.dart';
 
@@ -98,7 +95,7 @@ class BackupLog extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
-  AppDatabase.noDb() : super(_openConnection());
+  AppDatabase.noDb() : super(openConnection());
 
   @override
   int get schemaVersion => 2;
@@ -136,12 +133,4 @@ class AppDatabase extends _$AppDatabase {
       },
     );
   }
-}
-
-QueryExecutor _openConnection() {
-  return LazyDatabase(() async {
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'purenote.db'));
-    return NativeDatabase(file);
-  });
 }

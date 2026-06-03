@@ -21,15 +21,28 @@ import 'package:purenote/features/lock/providers/lock_state_provider.dart';
 import 'package:purenote/features/lock/screens/pin_entry_screen.dart';
 
 const _backupTaskName = 'purenote-backup';
+const _rescheduleTaskName = 'purenote-reschedule';
 
 @pragma('vm:entry-point')
-void backupCallbackDispatcher() {
+void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     if (task == _backupTaskName) {
       try {
         final db = AppDatabase.noDb();
         final service = BackupService(db);
         await service.createBackup(includeFiles: false);
+        await db.close();
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+    if (task == _rescheduleTaskName) {
+      try {
+        final db = AppDatabase.noDb();
+        final dao = NoteDao(db);
+        await NotificationService.init(dao: dao);
+        await NotificationService.rescheduleAll(dao);
         await db.close();
         return true;
       } catch (_) {
@@ -49,20 +62,43 @@ Future<void> main() async {
       options.dsn = const String.fromEnvironment('SENTRY_DSN', defaultValue: '');
       options.tracesSampleRate = 0.0;
       options.enableNdkScopeSync = true;
+      options.enableAutoNativeBreadcrumbs = true;
     },
     appRunner: () async {
       final db = AppDatabase.noDb();
       final noteDao = NoteDao(db);
       await NotificationService.init(dao: noteDao);
       HomeWidget.registerInteractivityCallback(widgetBackgroundCallback);
-      await Workmanager().initialize(backupCallbackDispatcher);
+      await Workmanager().initialize(callbackDispatcher);
       await Workmanager().registerPeriodicTask(
         _backupTaskName,
         _backupTaskName,
         frequency: const Duration(hours: 24),
-        constraints: Constraints(networkType: NetworkType.connected),
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+          requiresBatteryNotLow: true,
+          requiresStorageNotLow: true,
+        ),
         existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
       );
+      await Workmanager().registerPeriodicTask(
+        _rescheduleTaskName,
+        _rescheduleTaskName,
+        frequency: const Duration(hours: 6),
+        constraints: Constraints(),
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      );
+      // Reschedule reminders on app start (catches boot)
+      final notes = await noteDao.getAll();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      for (final note in notes) {
+        if (note.reminderAt != null && note.reminderAt! > now) {
+          await NotificationService.schedule(
+            noteDao, note.id, note.title,
+            DateTime.fromMillisecondsSinceEpoch(note.reminderAt!),
+          );
+        }
+      }
       runApp(
         const ProviderScope(
           child: PurenoteApp(),
@@ -89,24 +125,29 @@ class _PurenoteAppState extends ConsumerState<PurenoteApp> with WidgetsBindingOb
     WidgetsBinding.instance.addObserver(this);
     Future.microtask(() async {
       ref.read(settingsNotifierProvider.notifier).load();
-      final dao = ref.read(noteDaoProvider);
+      final noteDao = ref.read(noteDaoProvider);
+      final labelDao = ref.read(labelDaoProvider);
       final settings = ref.read(settingsNotifierProvider);
       WidgetService.updateWidgetData(
-        dao,
+        noteDao,
+        labelDao: labelDao,
         widgetSource: settings.widgetSource,
         widgetMaxItems: settings.widgetMaxItems,
         widgetTheme: settings.widgetTheme,
+        widgetLabel: settings.widgetLabel,
       );
 
-      _noteSubscription = dao.watchAll().listen((_) {
+      _noteSubscription = noteDao.watchAll().listen((_) {
         _widgetDebounce?.cancel();
         _widgetDebounce = Timer(const Duration(seconds: 2), () {
           final s = ref.read(settingsNotifierProvider);
           WidgetService.updateWidgetData(
-            dao,
+            noteDao,
+            labelDao: labelDao,
             widgetSource: s.widgetSource,
             widgetMaxItems: s.widgetMaxItems,
             widgetTheme: s.widgetTheme,
+            widgetLabel: s.widgetLabel,
           );
         });
       });
