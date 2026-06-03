@@ -1,3 +1,8 @@
+# Suppress warnings for Play Core (referenced by Flutter deferred components, not used at runtime)
+-dontwarn com.google.android.play.core.splitcompat.**
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**
+
 # Flutter specific
 -keep class io.flutter.app.** { *; }
 -keep class io.flutter.plugin.**  { *; }
