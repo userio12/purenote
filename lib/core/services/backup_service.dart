@@ -4,9 +4,16 @@ import 'package:archive/archive.dart';
 import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:pointycastle/export.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/services/encryption_service.dart';
+
+String _sha256Hex(String data) {
+  final digest = SHA256Digest();
+  final hash = digest.process(Uint8List.fromList(utf8.encode(data)));
+  return hash.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+}
 
 class BackupService {
   final AppDatabase _db;
@@ -34,7 +41,7 @@ class BackupService {
     final taskItems = await _db.select(_db.taskItems).get();
     final settings = await _db.select(_db.settings).get();
 
-    return {
+    final data = <String, String>{
       'notes.json': jsonEncode(notes.map((n) => {
         'id': n.id,
         'type': n.type,
@@ -75,14 +82,23 @@ class BackupService {
         'orderIndex': t.orderIndex,
       }).toList()),
       'settings.json': jsonEncode({for (final s in settings) s.key: s.value}),
-      'manifest.json': jsonEncode({
-        'version': 1,
-        'createdAt': DateTime.now().millisecondsSinceEpoch,
-        'appVersion': '1.0.0',
-        'noteCount': notes.length,
-        'attachmentCount': attachments.length,
-      }),
     };
+
+    final checksums = <String, String>{};
+    for (final entry in data.entries) {
+      checksums[entry.key] = _sha256Hex(entry.value);
+    }
+
+    data['manifest.json'] = jsonEncode({
+      'version': 1,
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'appVersion': '1.0.0',
+      'noteCount': notes.length,
+      'attachmentCount': attachments.length,
+      'checksums': checksums,
+    });
+
+    return data;
   }
 
   Future<String> createBackup({bool includeFiles = false, String? password}) async {
@@ -151,6 +167,18 @@ class BackupService {
     if (manifestRaw.isEmpty) throw Exception('Invalid backup: missing manifest');
 
     final manifest = jsonDecode(manifestRaw) as Map<String, dynamic>;
+
+    final checksums = manifest['checksums'] as Map<String, dynamic>?;
+    if (checksums != null) {
+      for (final entry in ['notes.json', 'labels.json', 'note_labels.json', 'attachments.json', 'task_items.json', 'settings.json']) {
+        final content = readEntry(entry);
+        final expectedHash = checksums[entry] as String?;
+        if (expectedHash != null && _sha256Hex(content) != expectedHash) {
+          throw Exception('Backup integrity check failed for $entry');
+        }
+      }
+    }
+
     final notesRaw = readEntry('notes.json');
 
     return RestoreData(
@@ -179,6 +207,18 @@ class BackupService {
     final manifest = jsonDecode(manifestRaw) as Map<String, dynamic>;
     if ((manifest['version'] as int? ?? 0) > 1) {
       throw Exception('Backup format version ${manifest['version']} is newer than supported (1)');
+    }
+
+    final checksums = manifest['checksums'] as Map<String, dynamic>?;
+    if (checksums != null) {
+      for (final entry in ['notes.json', 'labels.json', 'note_labels.json', 'attachments.json', 'task_items.json', 'settings.json', 'manifest.json']) {
+        if (entry == 'manifest.json') continue;
+        final content = readEntry(entry);
+        final expectedHash = checksums[entry] as String?;
+        if (expectedHash != null && _sha256Hex(content) != expectedHash) {
+          throw Exception('Backup integrity check failed for $entry');
+        }
+      }
     }
 
     final notes = jsonDecode(readEntry('notes.json')) as List;

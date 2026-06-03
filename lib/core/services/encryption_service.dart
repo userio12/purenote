@@ -31,7 +31,12 @@ class EncryptionService {
       'data': encrypted.base64,
     };
 
-    return base64Encode(utf8.encode(jsonEncode(result)));
+    final output = base64Encode(utf8.encode(jsonEncode(result)));
+
+    _zeroKey(key);
+    _zeroIv(iv);
+
+    return output;
   }
 
   static String decrypt(String ciphertext, String password) {
@@ -41,9 +46,28 @@ class EncryptionService {
       final iv = enc.IV.fromBase64(payload['iv'] as String);
       final key = _deriveKey(password, salt);
       final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.cbc));
-      return encrypter.decrypt64(payload['data'] as String, iv: iv);
+      final output = encrypter.decrypt64(payload['data'] as String, iv: iv);
+
+      _zeroKey(key);
+      _zeroIv(iv);
+
+      return output;
     } catch (_) {
       throw Exception('Decryption failed');
+    }
+  }
+
+  static void _zeroKey(enc.Key key) {
+    final bytes = key.bytes;
+    for (var i = 0; i < bytes.length; i++) {
+      bytes[i] = 0;
+    }
+  }
+
+  static void _zeroIv(enc.IV iv) {
+    final bytes = iv.bytes;
+    for (var i = 0; i < bytes.length; i++) {
+      bytes[i] = 0;
     }
   }
 }

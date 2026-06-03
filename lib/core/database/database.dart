@@ -98,22 +98,26 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.noDb() : super(openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (m) async {
         await m.createAll();
+        await _createIndexes();
+        await _createFts5();
         try {
-          await customStatement('CREATE INDEX IF NOT EXISTS notes_updated_at_idx ON notes(updatedAt)');
-          await customStatement('CREATE INDEX IF NOT EXISTS notes_is_pinned_idx ON notes(isPinned)');
-          await customStatement('CREATE INDEX IF NOT EXISTS note_labels_note_id_idx ON note_labels(noteId)');
+          await customStatement('INSERT INTO notes_fts(id, title, content) SELECT id, title, content FROM notes');
         } catch (_) {}
       },
       onUpgrade: (m, from, to) async {
         if (from < 2) {
           await m.addColumn(labels, labels.orderIndex);
+        }
+        if (from < 3) {
+          await _createFts5();
+          await customStatement('INSERT INTO notes_fts(id, title, content) SELECT id, title, content FROM notes');
         }
       },
       beforeOpen: (details) async {
@@ -124,13 +128,30 @@ class AppDatabase extends _$AppDatabase {
           assert(result.isEmpty, 'Foreign key violations: $result');
         }
         if (!details.wasCreated) {
-          try {
-            await customStatement('CREATE INDEX IF NOT EXISTS notes_updated_at_idx ON notes(updatedAt)');
-            await customStatement('CREATE INDEX IF NOT EXISTS notes_is_pinned_idx ON notes(isPinned)');
-            await customStatement('CREATE INDEX IF NOT EXISTS note_labels_note_id_idx ON note_labels(noteId)');
-          } catch (_) {}
+          await _createIndexes();
+          await _createFts5();
         }
       },
     );
+  }
+
+  Future<void> _createIndexes() async {
+    try {
+      await customStatement('CREATE INDEX IF NOT EXISTS notes_updated_at_idx ON notes(updatedAt)');
+      await customStatement('CREATE INDEX IF NOT EXISTS notes_is_pinned_idx ON notes(isPinned)');
+      await customStatement('CREATE INDEX IF NOT EXISTS note_labels_note_id_idx ON note_labels(noteId)');
+    } catch (_) {}
+  }
+
+  Future<void> _createFts5() async {
+    // FTS5 is created if available; errors are silently ignored
+    // when the sqlite3 build does not include FTS5 (e.g. some test runners).
+    try {
+      await customStatement('''
+        CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+          id UNINDEXED, title, content
+        )
+      ''');
+    } catch (_) {}
   }
 }

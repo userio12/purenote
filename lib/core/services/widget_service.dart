@@ -68,17 +68,23 @@ class WidgetService {
 @pragma('vm:entry-point')
 Future<void> widgetBackgroundCallback(Uri? uri) async {
   try {
-    final title = await HomeWidget.getWidgetData<String>(WidgetService._titleKey);
-    final body = await HomeWidget.getWidgetData<String>(WidgetService._bodyKey);
-    if (title != null) {
-      await HomeWidget.saveWidgetData(WidgetService._titleKey, title);
-    }
-    if (body != null) {
-      await HomeWidget.saveWidgetData(WidgetService._bodyKey, body);
-    }
-    await HomeWidget.updateWidget(
-      androidName: 'PureNoteWidgetProvider',
-      qualifiedAndroidName: 'com.purenote.purenote.PureNoteWidgetProvider',
-    );
+    await _refreshFromSavedData();
   } catch (_) {}
+}
+
+Future<void> _refreshFromSavedData() async {
+  const titleKey = 'title';
+  const bodyKey = 'body';
+  final title = await HomeWidget.getWidgetData<String>(titleKey);
+  final body = await HomeWidget.getWidgetData<String>(bodyKey);
+  if (title != null) {
+    await HomeWidget.saveWidgetData(titleKey, title);
+  }
+  if (body != null) {
+    await HomeWidget.saveWidgetData(bodyKey, body);
+  }
+  await HomeWidget.updateWidget(
+    androidName: 'PureNoteWidgetProvider',
+    qualifiedAndroidName: 'com.purenote.purenote.PureNoteWidgetProvider',
+  );
 }

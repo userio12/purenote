@@ -9,7 +9,7 @@ part 'search_provider.g.dart';
 Stream<List<Note>> searchResults(SearchResultsRef ref, String query) {
   if (query.trim().isEmpty) return Stream.value([]);
   final dao = ref.watch(noteDaoProvider);
-  return dao.search(query.trim());
+  return dao.searchFts5(query.trim());
 }
 
 @Riverpod(keepAlive: true)

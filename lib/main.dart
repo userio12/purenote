@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:home_widget/home_widget.dart';
+import 'package:path/path.dart' as p;
 import 'package:workmanager/workmanager.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:purenote/core/error/global_error_handler.dart';
@@ -22,12 +22,17 @@ import 'package:purenote/features/lock/screens/pin_entry_screen.dart';
 
 const _backupTaskName = 'purenote-backup';
 const _rescheduleTaskName = 'purenote-reschedule';
+const _foregroundFlagFile = 'purenote_foreground.flag';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     if (task == _backupTaskName) {
       try {
+        final flagFile = File(p.join(Directory.systemTemp.path, _foregroundFlagFile));
+        if (await flagFile.exists()) {
+          return true;
+        }
         final db = AppDatabase.noDb();
         final service = BackupService(db);
         await service.createBackup(includeFiles: false);
@@ -171,7 +176,21 @@ class _PurenoteAppState extends ConsumerState<PurenoteApp> with WidgetsBindingOb
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(lockStateProvider.notifier).checkAndLock();
+      _setForegroundFlag(true);
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _setForegroundFlag(false);
     }
+  }
+
+  Future<void> _setForegroundFlag(bool foreground) async {
+    try {
+      final flagFile = File(p.join(Directory.systemTemp.path, _foregroundFlagFile));
+      if (foreground) {
+        await flagFile.create();
+      } else {
+        if (await flagFile.exists()) await flagFile.delete();
+      }
+    } catch (_) {}
   }
 
   @override
