@@ -13,6 +13,8 @@ import 'package:purenote/features/notes/widgets/note_card.dart';
 import 'package:purenote/features/notes/widgets/note_tile.dart';
 import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
 
+final _selectedIdsProvider = StateProvider<Set<String>>((_) => {});
+
 class NotesListScreen extends ConsumerStatefulWidget {
   const NotesListScreen({super.key});
 
@@ -22,7 +24,6 @@ class NotesListScreen extends ConsumerStatefulWidget {
 
 class _NotesListScreenState extends ConsumerState<NotesListScreen> {
   String? _selectedLabelId;
-  final _selectedIds = <String>{};
 
   List<Note> _sortNotes(List<Note> notes, AppSettings settings) {
     final sorted = List<Note>.from(notes);
@@ -47,12 +48,13 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
   }
 
   Future<void> _bulkDelete() async {
-    if (_selectedIds.isEmpty) return;
+    final ids = ref.read(_selectedIdsProvider);
+    if (ids.isEmpty) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete notes'),
-        content: Text('Delete ${_selectedIds.length} note${_selectedIds.length == 1 ? '' : 's'}?'),
+        content: Text('Delete ${ids.length} note${ids.length == 1 ? '' : 's'}?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
@@ -61,36 +63,38 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
     );
     if (confirmed == true && mounted) {
       final dao = ref.read(noteDaoProvider);
-      for (final id in _selectedIds) {
+      for (final id in ids) {
         await NotificationService.cancel(id);
         await dao.delete(id);
       }
-      setState(() => _selectedIds.clear());
+      ref.read(_selectedIdsProvider.notifier).state = {};
     }
   }
 
   Future<void> _bulkPin(bool pin) async {
+    final ids = ref.read(_selectedIdsProvider);
     final dao = ref.read(noteDaoProvider);
-    for (final id in _selectedIds) {
+    for (final id in ids) {
       await dao.updateFields(NotesCompanion(
         id: Value(id),
         isPinned: Value(pin),
       ));
     }
-    setState(() => _selectedIds.clear());
+    ref.read(_selectedIdsProvider.notifier).state = {};
   }
 
   Future<void> _bulkLabel() async {
+    final ids = ref.read(_selectedIdsProvider);
     final labelDao = ref.read(labelDaoProvider);
     if (!mounted) return;
     final result = await showLabelPickerSheet(context, selected: []);
     if (result != null && mounted) {
-      for (final id in _selectedIds) {
+      for (final id in ids) {
         for (final label in result) {
           await labelDao.assignLabelToNote(id, label.id);
         }
       }
-      setState(() => _selectedIds.clear());
+      ref.read(_selectedIdsProvider.notifier).state = {};
     }
   }
 
@@ -101,20 +105,23 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
         : ref.watch(notesStreamProvider);
     final settings = ref.watch(settingsNotifierProvider);
     final labelsAsync = ref.watch(allLabelsProvider);
+    final selectedIds = ref.watch(_selectedIdsProvider);
+
+    final isSelectionMode = selectedIds.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
-        title: _selectedIds.isNotEmpty
-            ? Text('${_selectedIds.length} selected')
+        title: isSelectionMode
+            ? Text('${selectedIds.length} selected')
             : const Text('Notes'),
-        leading: _selectedIds.isNotEmpty
+        leading: isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),
-                onPressed: () => setState(() => _selectedIds.clear()),
+                onPressed: () => ref.read(_selectedIdsProvider.notifier).state = {},
               )
             : null,
         actions: [
-          if (_selectedIds.isNotEmpty) ...[
+          if (isSelectionMode) ...[
             IconButton(
               icon: const Icon(Icons.push_pin),
               onPressed: () => _bulkPin(true),
@@ -246,7 +253,7 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
                           key: const ValueKey('grid'),
                           pinned: pinned,
                           unpinned: unpinned,
-                          selectedIds: _selectedIds,
+                          selectedIds: selectedIds,
                           onTap: (note) => _onNoteTap(note),
                           onLongPress: (note) => _onNoteLongPress(note),
                           onPin: (note) => _togglePin(note),
@@ -256,7 +263,7 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
                           key: const ValueKey('list'),
                           pinned: pinned,
                           unpinned: unpinned,
-                          selectedIds: _selectedIds,
+                          selectedIds: selectedIds,
                           onTap: (note) => _onNoteTap(note),
                           onLongPress: (note) => _onNoteLongPress(note),
                           onPin: (note) => _togglePin(note),
@@ -274,7 +281,7 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
         ),
         error: (e, _) => _ErrorState(onRetry: () => ref.invalidate(notesStreamProvider)),
       ),
-      floatingActionButton: _selectedIds.isEmpty
+      floatingActionButton: !isSelectionMode
           ? FloatingActionButton(
               onPressed: () => context.push('/note/new'),
               tooltip: 'New note',
@@ -285,13 +292,16 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
   }
 
   void _onNoteTap(Note note) {
-    if (_selectedIds.isNotEmpty) {
-      setState(() {
-        if (_selectedIds.contains(note.id)) {
-          _selectedIds.remove(note.id);
+    final selected = ref.read(_selectedIdsProvider);
+    if (selected.isNotEmpty) {
+      final notifier = ref.read(_selectedIdsProvider.notifier);
+      notifier.update((state) {
+        if (state.contains(note.id)) {
+          state.remove(note.id);
         } else {
-          _selectedIds.add(note.id);
+          state.add(note.id);
         }
+        return {...state};
       });
       return;
     }
@@ -303,8 +313,9 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
   }
 
   void _onNoteLongPress(Note note) {
-    if (_selectedIds.isEmpty) {
-      setState(() => _selectedIds.add(note.id));
+    final selected = ref.read(_selectedIdsProvider);
+    if (selected.isEmpty) {
+      ref.read(_selectedIdsProvider.notifier).state = {note.id};
     }
   }
 

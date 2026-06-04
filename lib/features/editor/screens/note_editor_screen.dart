@@ -37,7 +37,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
   late TextEditingController _titleController;
   bool _isNew = true;
   Timer? _saveTimer;
-  bool _hasChanges = false;
   String? _currentNoteId;
   List<Attachment> _attachments = [];
   List<Label> _noteLabels = [];
@@ -54,18 +53,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
     _isNew = widget.noteId == null;
 
     _quillController.document.changes.listen((_) {
-      if (!_hasChanges) {
-        setState(() => _hasChanges = true);
-        ref.read(editorStateProvider.notifier).markDirty();
-      }
+      ref.read(editorStateProvider.notifier).markDirty();
       _debounceSave();
     });
 
     _titleController.addListener(() {
-      if (!_hasChanges) {
-        setState(() => _hasChanges = true);
-        ref.read(editorStateProvider.notifier).markDirty();
-      }
+      ref.read(editorStateProvider.notifier).markDirty();
       _debounceSave();
     });
 
@@ -88,7 +81,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      if (_hasChanges) _save();
+      if (ref.read(editorStateProvider).saveStatus == SaveStatus.unsaved) _save();
     }
   }
 
@@ -120,7 +113,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
                     document: doc,
                     selection: const TextSelection.collapsed(offset: 0),
                   );
-                  _hasChanges = false;
                 });
               }
             }
@@ -143,7 +135,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
               document: doc,
               selection: const TextSelection.collapsed(offset: 0),
             );
-            _hasChanges = false;
           });
         } catch (_) {}
       }
@@ -202,7 +193,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
       }
 
       if (mounted) {
-        setState(() => _hasChanges = false);
         _currentNoteId = id;
         _attachmentService ??= AttachmentService(ref.read(attachmentDaoProvider));
         _loadAttachments();
@@ -285,7 +275,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
   }
 
   Future<bool> _onWillPop() async {
-    if (!_hasChanges) return true;
+    if (ref.read(editorStateProvider).saveStatus != SaveStatus.unsaved) return true;
     await _saveDraft();
     if (!mounted) return true;
     final result = await showDialog<bool>(
@@ -466,7 +456,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
             document: doc,
             selection: const TextSelection.collapsed(offset: 0),
           );
-          _hasChanges = true;
         });
         ref.read(editorStateProvider.notifier).markDirty();
       }
