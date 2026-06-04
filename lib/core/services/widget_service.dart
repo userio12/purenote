@@ -1,15 +1,16 @@
 import 'package:home_widget/home_widget.dart';
 import 'package:purenote/core/database/database.dart';
+import 'package:purenote/core/database/daos/settings_dao.dart';
 import 'package:purenote/core/database/daos/label_dao.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
 
 class WidgetService {
-  static const _titleKey = 'title';
-  static const _bodyKey = 'body';
-  static const _sourceKey = 'widgetSource';
-  static const _maxItemsKey = 'widgetMaxItems';
-  static const _themeKey = 'widgetTheme';
+  static const titleKey = 'title';
+  static const bodyKey = 'body';
+  static const sourceKey = 'widgetSource';
+  static const maxItemsKey = 'widgetMaxItems';
+  static const themeKey = 'widgetTheme';
 
   static Future<void> updateWidgetData(
     NoteDao noteDao, {
@@ -52,11 +53,11 @@ class WidgetService {
         }
       }
 
-      await HomeWidget.saveWidgetData<String>(_titleKey, title);
-      await HomeWidget.saveWidgetData<String>(_bodyKey, body);
-      await HomeWidget.saveWidgetData<String>(_sourceKey, widgetSource);
-      await HomeWidget.saveWidgetData<String>(_maxItemsKey, widgetMaxItems.toString());
-      await HomeWidget.saveWidgetData<String>(_themeKey, widgetTheme);
+      await HomeWidget.saveWidgetData<String>(titleKey, title);
+      await HomeWidget.saveWidgetData<String>(bodyKey, body);
+      await HomeWidget.saveWidgetData<String>(sourceKey, widgetSource);
+      await HomeWidget.saveWidgetData<String>(maxItemsKey, widgetMaxItems.toString());
+      await HomeWidget.saveWidgetData<String>(themeKey, widgetTheme);
       await HomeWidget.updateWidget(
         androidName: 'PureNoteWidgetProvider',
         qualifiedAndroidName: 'com.purenote.purenote.PureNoteWidgetProvider',
@@ -67,24 +68,34 @@ class WidgetService {
 
 @pragma('vm:entry-point')
 Future<void> widgetBackgroundCallback(Uri? uri) async {
+  final db = AppDatabase.noDb();
   try {
-    await _refreshFromSavedData();
-  } catch (_) {}
-}
-
-Future<void> _refreshFromSavedData() async {
-  const titleKey = 'title';
-  const bodyKey = 'body';
-  final title = await HomeWidget.getWidgetData<String>(titleKey);
-  final body = await HomeWidget.getWidgetData<String>(bodyKey);
-  if (title != null) {
-    await HomeWidget.saveWidgetData(titleKey, title);
+    await db.customStatement('SELECT 1');
+    final dao = NoteDao(db);
+    final labelDao = LabelDao(db);
+    final settingsDao = SettingsDao(db);
+    final source = await settingsDao.get(WidgetService.sourceKey) ?? 'pinned';
+    final maxItems = int.tryParse(await settingsDao.get(WidgetService.maxItemsKey) ?? '') ?? 5;
+    final theme = await settingsDao.get(WidgetService.themeKey) ?? 'match';
+    final label = await settingsDao.get('widgetLabel');
+    await WidgetService.updateWidgetData(
+      dao,
+      labelDao: labelDao,
+      widgetSource: source,
+      widgetMaxItems: maxItems,
+      widgetTheme: theme,
+      widgetLabel: label,
+    );
+  } catch (_) {
+    final title = await HomeWidget.getWidgetData<String>(WidgetService.titleKey);
+    final body = await HomeWidget.getWidgetData<String>(WidgetService.bodyKey);
+    if (title != null) await HomeWidget.saveWidgetData<String>(WidgetService.titleKey, title);
+    if (body != null) await HomeWidget.saveWidgetData<String>(WidgetService.bodyKey, body);
+    await HomeWidget.updateWidget(
+      androidName: 'PureNoteWidgetProvider',
+      qualifiedAndroidName: 'com.purenote.purenote.PureNoteWidgetProvider',
+    );
+  } finally {
+    await db.close();
   }
-  if (body != null) {
-    await HomeWidget.saveWidgetData(bodyKey, body);
-  }
-  await HomeWidget.updateWidget(
-    androidName: 'PureNoteWidgetProvider',
-    qualifiedAndroidName: 'com.purenote.purenote.PureNoteWidgetProvider',
-  );
 }

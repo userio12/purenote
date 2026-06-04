@@ -180,12 +180,20 @@ class BackupService {
     }
 
     final notesRaw = readEntry('notes.json');
+    bool passwordProtected = false;
+    if (password == null || password.isEmpty) {
+      try {
+        jsonDecode(notesRaw);
+      } catch (_) {
+        passwordProtected = true;
+      }
+    }
 
     return RestoreData(
       noteCount: (jsonDecode(notesRaw) as List).length,
       attachmentCount: manifest['attachmentCount'] as int? ?? 0,
       timestamp: DateTime.fromMillisecondsSinceEpoch(manifest['createdAt'] as int),
-      passwordProtected: password == null && archive.findFile('notes.json')?.content.isNotEmpty == false,
+      passwordProtected: passwordProtected,
     );
   }
 
@@ -298,6 +306,17 @@ class BackupService {
         ), mode: InsertMode.insertOrReplace);
       }
     });
+
+    final appDir = await getApplicationDocumentsDirectory();
+    final attachDir = Directory(p.join(appDir.path, 'attachments'));
+    if (!await attachDir.exists()) await attachDir.create(recursive: true);
+    for (final entry in archive.files) {
+      if (entry.name.startsWith('files/')) {
+        final fileName = p.basename(entry.name);
+        final destPath = p.join(attachDir.path, fileName);
+        await File(destPath).writeAsBytes(entry.content);
+      }
+    }
 
     await _logBackup(zipPath, await File(zipPath).length(), 0, null);
   }

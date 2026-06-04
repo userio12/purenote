@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/providers/settings_provider.dart';
 import 'package:purenote/core/services/auth_service.dart';
@@ -454,11 +457,32 @@ class SettingsScreen extends ConsumerWidget {
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('All data cleared')),
-              );
+              try {
+                final db = ref.read(databaseProvider);
+                await db.delete(db.settings).go();
+                await db.delete(db.backupLog).go();
+                await db.delete(db.noteLabels).go();
+                await db.delete(db.attachments).go();
+                await db.delete(db.taskItems).go();
+                await db.delete(db.notes).go();
+                await db.delete(db.labels).go();
+                final appDir = await getApplicationDocumentsDirectory();
+                for (final dirName in ['attachments', 'temp']) {
+                  final dir = Directory(p.join(appDir.path, dirName));
+                  if (await dir.exists()) await dir.delete(recursive: true);
+                  await dir.create();
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All data cleared')));
+                  ref.invalidate(databaseProvider);
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to clear data: $e')));
+                }
+              }
             },
             child: const Text('Delete everything'),
           ),

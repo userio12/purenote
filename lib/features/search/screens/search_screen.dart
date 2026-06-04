@@ -47,8 +47,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     setState(() => _query = '');
   }
 
-  void _openNote(String id) {
-    context.push('/note/$id');
+  void _openNote(Note note) {
+    if (note.type == 1) {
+      context.push('/task-list/${note.id}');
+    } else {
+      context.push('/note/${note.id}/view');
+    }
   }
 
   @override
@@ -177,7 +181,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               key: ValueKey(note.id),
               note: note,
               query: _query,
-              onTap: () => _openNote(note.id),
+              onTap: () => _openNote(note),
             );
           },
         );

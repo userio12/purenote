@@ -142,12 +142,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
             Text('Locked note', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600)),
             const SizedBox(height: 8),
             FilledButton(
-              onPressed: () {
-                ref.read(noteDaoProvider).updateFields(NotesCompanion(
-                  id: Value(note.id),
-                  isLocked: const Value(false),
-                ));
-              },
+              onPressed: () => _toggleLock(note, ref.read(noteDaoProvider)),
               child: const Text('Unlock'),
             ),
           ],
