@@ -12,6 +12,7 @@ class WidgetService {
   static const sourceKey = 'widgetSource';
   static const maxItemsKey = 'widgetMaxItems';
   static const themeKey = 'widgetTheme';
+  static const widgetLabelKey = 'widgetLabel';
 
   static Future<void> updateWidgetData(
     NoteDao noteDao, {
@@ -80,7 +81,7 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
     final source = await settingsDao.get(WidgetService.sourceKey) ?? 'pinned';
     final maxItems = int.tryParse(await settingsDao.get(WidgetService.maxItemsKey) ?? '') ?? 5;
     final theme = await settingsDao.get(WidgetService.themeKey) ?? 'match';
-    final label = await settingsDao.get('widgetLabel');
+    final label = await settingsDao.get(WidgetService.widgetLabelKey);
     await WidgetService.updateWidgetData(
       dao,
       labelDao: labelDao,
