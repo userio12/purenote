@@ -64,7 +64,7 @@ class _LabelPickerSheetState extends ConsumerState<_LabelPickerSheet> {
                     border: OutlineInputBorder(),
                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
-                  onSubmitted: _createLabel,
+                  onSubmitted: (v) { _createLabel(v); },
                 ),
               ),
               const SizedBox(width: 8),

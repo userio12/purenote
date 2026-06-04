@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purenote/core/database/database.dart';
+import 'package:purenote/core/database/note_type.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/providers/settings_provider.dart';
 import 'package:purenote/core/services/notification_service.dart';
@@ -294,7 +295,7 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
       });
       return;
     }
-    if (note.type == 1) {
+    if (note.isTaskList) {
       context.push('/task-list/${note.id}');
     } else {
       context.push('/note/${note.id}');

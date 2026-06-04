@@ -138,7 +138,7 @@ class NoteDao {
     ).watch().map((rows) => rows.map((r) {
       final d = r.data;
       return Note(
-        id: d['id'] as String,
+        id: d['id'] as String? ?? '',
         type: d['type'] as int? ?? 0,
         title: d['title'] as String? ?? '',
         content: d['content'] as String? ?? '',
@@ -147,8 +147,8 @@ class NoteDao {
         isLocked: d['is_locked'] as bool? ?? false,
         isArchived: d['is_archived'] as bool? ?? false,
         reminderAt: d['reminder_at'] as int?,
-        createdAt: d['created_at'] as int,
-        updatedAt: d['updated_at'] as int,
+        createdAt: d['created_at'] as int? ?? 0,
+        updatedAt: d['updated_at'] as int? ?? 0,
         orderIndex: (d['order_index'] as num?)?.toDouble() ?? 0.0,
       );
     }).toList());

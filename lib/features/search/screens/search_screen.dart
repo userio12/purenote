@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purenote/core/database/database.dart';
+import 'package:purenote/core/database/note_type.dart';
 import 'package:purenote/features/search/providers/search_provider.dart';
 import 'package:purenote/features/search/widgets/search_result_tile.dart';
 
@@ -48,7 +49,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _openNote(Note note) {
-    if (note.type == 1) {
+    if (note.isTaskList) {
       context.push('/task-list/${note.id}');
     } else {
       context.push('/note/${note.id}/view');
