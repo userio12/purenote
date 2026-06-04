@@ -139,23 +139,7 @@ class NoteDao {
       rawQuery,
       variables: [Variable(ftsQuery)],
       readsFrom: {_db.notes},
-    ).watch().map((rows) => rows.map((r) {
-      final d = r.data;
-      return Note(
-        id: d['id'] as String? ?? '',
-        type: d['type'] as int? ?? 0,
-        title: d['title'] as String? ?? '',
-        content: d['content'] as String? ?? '',
-        color: d['color'] as int?,
-        isPinned: d['is_pinned'] as bool? ?? false,
-        isLocked: d['is_locked'] as bool? ?? false,
-        isArchived: d['is_archived'] as bool? ?? false,
-        reminderAt: d['reminder_at'] as int?,
-        createdAt: d['created_at'] as int? ?? 0,
-        updatedAt: d['updated_at'] as int? ?? 0,
-        orderIndex: (d['order_index'] as num?)?.toDouble() ?? 0.0,
-      );
-    }).toList());
+    ).watch().map((rows) => rows.map((r) => _db.notes.map(r.data)).toList());
   }
 
   Future<List<Note>> getAll() {

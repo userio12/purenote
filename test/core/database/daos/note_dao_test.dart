@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
+import 'package:purenote/core/database/note_type.dart';
 import 'package:purenote/core/error/result.dart';
 
 void main() {
@@ -62,6 +63,56 @@ void main() {
       expect(results.length, 2);
       expect(results.any((n) => n.id == '1'), isTrue);
       expect(results.any((n) => n.id == '3'), isTrue);
+    });
+  });
+
+  group('NoteTypeX', () {
+    test('isTaskList is true for type 1', () {
+      final note = Note(
+        id: 'test',
+        type: 1,
+        title: '',
+        content: '',
+        isPinned: false,
+        isLocked: false,
+        isArchived: false,
+        createdAt: 0,
+        updatedAt: 0,
+        orderIndex: 0,
+      );
+      expect(note.isTaskList, isTrue);
+    });
+
+    test('isTaskList is false for type 0', () {
+      final note = Note(
+        id: 'test',
+        type: 0,
+        title: '',
+        content: '',
+        isPinned: false,
+        isLocked: false,
+        isArchived: false,
+        createdAt: 0,
+        updatedAt: 0,
+        orderIndex: 0,
+      );
+      expect(note.isTaskList, isFalse);
+    });
+
+    test('isTaskList is false for other types', () {
+      final note = Note(
+        id: 'test',
+        type: 2,
+        title: '',
+        content: '',
+        isPinned: false,
+        isLocked: false,
+        isArchived: false,
+        createdAt: 0,
+        updatedAt: 0,
+        orderIndex: 0,
+      );
+      expect(note.isTaskList, isFalse);
     });
   });
 }
