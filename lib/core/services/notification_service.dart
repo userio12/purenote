@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
+import 'package:purenote/core/error/error_logger.dart';
 import 'package:purenote/core/routing/app_router.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -126,6 +127,8 @@ class NotificationService {
           );
         }
       }
-    } catch (_) {}
+    } catch (e, s) {
+      ErrorLogger.logError('Failed to reschedule notifications', error: e, stackTrace: s);
+    }
   }
 }

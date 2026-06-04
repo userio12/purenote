@@ -81,13 +81,15 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      if (ref.read(editorStateProvider).saveStatus == SaveStatus.unsaved) _save();
+      if (ref.read(editorStateProvider).saveStatus == SaveStatus.unsaved) {
+        unawaited(_save());
+      }
     }
   }
 
   void _debounceSave() {
     _saveTimer?.cancel();
-    _saveTimer = Timer(const Duration(milliseconds: 800), _save);
+    _saveTimer = Timer(const Duration(milliseconds: 800), () => unawaited(_save()));
   }
 
   Future<void> _loadNote() async {
@@ -138,8 +140,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
           });
         } catch (_) {}
       }
-      _loadLabels();
-      _checkDraft();
+      await _loadLabels();
+      await _checkDraft();
     }
   }
 
@@ -178,8 +180,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
             isLocked: Value(_isLocked),
             reminderAt: Value(reminderMs),
           ));
+          _isNew = false;
         }
-        _isNew = false;
       } else {
         await dao.updateFields(NotesCompanion(
           id: Value(widget.noteId!),
@@ -407,7 +409,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
     for (final id in toAdd) {
       await dao.assignLabelToNote(widget.noteId!, id);
     }
-    _loadLabels();
+    await _loadLabels();
     _debounceSave();
   }
 

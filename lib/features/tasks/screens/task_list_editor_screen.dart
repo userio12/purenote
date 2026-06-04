@@ -211,8 +211,8 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
             color: Value(_selectedColor),
             isPinned: Value(_isPinned),
           ));
+          _isNew = false;
         }
-        _isNew = false;
       } else {
         await noteDao.updateFields(NotesCompanion(
           id: Value(widget.noteId!),

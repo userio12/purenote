@@ -3,6 +3,7 @@ import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/database/daos/settings_dao.dart';
 import 'package:purenote/core/database/daos/label_dao.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
+import 'package:purenote/core/error/error_logger.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
 
 class WidgetService {
@@ -62,7 +63,9 @@ class WidgetService {
         androidName: 'PureNoteWidgetProvider',
         qualifiedAndroidName: 'com.purenote.purenote.PureNoteWidgetProvider',
       );
-    } catch (_) {}
+    } catch (e, s) {
+      ErrorLogger.logError('Widget update failed', error: e, stackTrace: s);
+    }
   }
 }
 

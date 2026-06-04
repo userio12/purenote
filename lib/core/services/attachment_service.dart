@@ -5,8 +5,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/database/daos/attachment_dao.dart';
-import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/error/app_error.dart';
+import 'package:purenote/core/error/error_logger.dart';
+import 'package:purenote/core/error/result.dart';
 
 class AttachmentService {
   final AttachmentDao dao;
@@ -88,6 +89,8 @@ class AttachmentService {
           await file.delete();
         }
       }
-    } catch (_) {}
+    } catch (e, s) {
+      ErrorLogger.logError('Failed to clean orphan attachments', error: e, stackTrace: s);
+    }
   }
 }

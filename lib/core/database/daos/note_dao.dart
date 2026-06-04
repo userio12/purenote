@@ -95,7 +95,9 @@ class NoteDao {
     try {
       await _db.customInsert('INSERT INTO notes_fts(id, title, content) VALUES (?, ?, ?)',
         variables: [Variable(note.id), Variable(note.title), Variable(note.content)]);
-    } catch (_) {}
+    } catch (e, s) {
+      ErrorLogger.logError('FTS5 insert failed', error: e, stackTrace: s);
+    }
   }
 
   Future<void> _syncFtsDelete(String id) async {
@@ -103,7 +105,9 @@ class NoteDao {
       await _db.customInsert(
         'INSERT INTO notes_fts(notes_fts, rowid) VALUES(\'delete\', COALESCE((SELECT rowid FROM notes_fts WHERE id = ?), 0))',
         variables: [Variable(id)]);
-    } catch (_) {}
+    } catch (e, s) {
+      ErrorLogger.logError('FTS5 delete failed', error: e, stackTrace: s);
+    }
   }
 
   Stream<List<Note>> watchByType(int type) {

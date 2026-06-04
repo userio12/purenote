@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,7 +46,7 @@ class LabelsManagementScreen extends ConsumerWidget {
               final ids = labels.map((l) => l.id).toList();
               final item = ids.removeAt(oldIndex);
               ids.insert(newIndex > oldIndex ? newIndex - 1 : newIndex, item);
-              ref.read(labelDaoProvider).reorderLabels(ids);
+              unawaited(ref.read(labelDaoProvider).reorderLabels(ids));
             },
             buildDefaultDragHandles: false,
             itemBuilder: (context, index) {
