@@ -1,4 +1,4 @@
-name: Flutter Debug Build (arm64-v8a)
+name: Flutter Debug Build (split-per-abi)
 
 on:
   push:
@@ -28,11 +28,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Debug APK (arm64-v8a)
+      - name: Build Debug APKs (split-per-abi)
         shell: bash
         run: |
           set -o pipefail
-          flutter build apk --debug --target-platform android-arm64 2>&1 | tee build_log.txt
+          flutter build apk --debug --split-per-abi 2>&1 | tee build_log.txt
           echo "APK_COUNT=$(find build/app/outputs/flutter-apk/ -name '*.apk' | wc -l)" >> "$GITHUB_ENV"
 
       - name: Report Build Failure
@@ -62,5 +62,5 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-arm64-v8a
+          name: app-debug-apks
           path: build/app/outputs/flutter-apk/*.apk
