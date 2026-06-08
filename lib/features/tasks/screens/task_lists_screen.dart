@@ -5,6 +5,7 @@ import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
 import 'package:purenote/features/tasks/providers/task_items_provider.dart';
 import 'package:purenote/features/tasks/providers/task_lists_provider.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class TaskListsScreen extends ConsumerWidget {
   const TaskListsScreen({super.key});
@@ -14,7 +15,7 @@ class TaskListsScreen extends ConsumerWidget {
     final taskListsAsync = ref.watch(taskListNotesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tasks')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.tasks)),
       body: taskListsAsync.when(
         data: (notes) {
           if (notes.isEmpty) {
@@ -33,7 +34,7 @@ class TaskListsScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/task-list/new'),
-        tooltip: 'New task list',
+        tooltip: AppLocalizations.of(context)!.newTaskList,
         child: const Icon(Icons.add),
       ),
     );
@@ -74,7 +75,7 @@ class _TaskListCard extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              note.title.isEmpty ? 'Untitled' : note.title,
+                              note.title.isEmpty ? AppLocalizations.of(context)!.untitled : note.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.titleSmall?.copyWith(
@@ -122,7 +123,7 @@ class _TaskListCard extends ConsumerWidget {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                _itemPreview(item.content),
+                                _itemPreview(item.content, context),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.bodySmall?.copyWith(
@@ -162,9 +163,9 @@ class _TaskListCard extends ConsumerWidget {
     return [...unchecked, ...checked];
   }
 
-  String _itemPreview(String content) {
+  String _itemPreview(String content, BuildContext context) {
     final text = stripQuillDelta(content);
-    return text.isNotEmpty ? text : 'Empty item';
+    return text.isNotEmpty ? text : AppLocalizations.of(context)!.emptyItem;
   }
 }
 
@@ -207,14 +208,14 @@ class _EmptyState extends StatelessWidget {
           Icon(Icons.checklist_outlined, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
-            'No task lists yet',
+            AppLocalizations.of(context)!.noTaskListsYet,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Colors.grey.shade600,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Create your first task list',
+            AppLocalizations.of(context)!.createFirstTaskList,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey.shade500,
             ),
@@ -240,7 +241,7 @@ class _ErrorState extends StatelessWidget {
           FilledButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(AppLocalizations.of(context)!.retry),
           ),
         ],
       ),

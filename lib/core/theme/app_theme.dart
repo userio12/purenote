@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 
 class AppTheme {
   static const _seedColor = Color(0xFF6750A4);
@@ -59,18 +60,5 @@ class AppTheme {
     );
   }
 
-  static const List<int> noteColors = [
-    0xFFEF5350,
-    0xFFAB47BC,
-    0xFF5C6BC0,
-    0xFF42A5F5,
-    0xFF26C6DA,
-    0xFF66BB6A,
-    0xFF9CCC65,
-    0xFFFFEE58,
-    0xFFFFA726,
-    0xFF8D6E63,
-    0xFF78909C,
-    0xFFEC407A,
-  ];
+  static const List<int> noteColors = AppColors.noteColorValues;
 }

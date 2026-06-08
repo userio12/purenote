@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:purenote/core/services/auth_service.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class PinEntryScreen extends StatefulWidget {
   final VoidCallback onUnlock;
@@ -99,12 +100,12 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
     }
   }
 
-  String get _lockoutText {
+  String _lockoutText(BuildContext context) {
     if (_lockoutEnd == null) return '';
     final remaining = _lockoutEnd! - DateTime.now().millisecondsSinceEpoch;
     if (remaining <= 0) return '';
     final seconds = (remaining / 1000).ceil();
-    return 'Too many attempts. Try again in $seconds seconds';
+    return AppLocalizations.of(context)!.tooManyAttempts(seconds);
   }
 
   @override
@@ -115,8 +116,8 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
         children: [
           Icon(Icons.lock_outline, size: 64, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 16),
-          Text(
-            'Enter PIN',
+            Text(
+            AppLocalizations.of(context)!.enterPin,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 32),
@@ -148,7 +149,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
           ),
           if (_isLockedOut()) ...[
             const SizedBox(height: 16),
-            Text(_lockoutText, style: const TextStyle(color: Colors.red, fontSize: 13)),
+            Text(_lockoutText(context), style: const TextStyle(color: Colors.red, fontSize: 13)),
           ] else ...[
             const SizedBox(height: 16),
             FutureBuilder<bool>(
@@ -158,7 +159,7 @@ class _PinEntryScreenState extends State<PinEntryScreen> {
                 return TextButton.icon(
                   onPressed: _tryBiometric,
                   icon: const Icon(Icons.fingerprint),
-                  label: const Text('Use biometric'),
+                  label: Text(AppLocalizations.of(context)!.useBiometric),
                 );
               },
             ),

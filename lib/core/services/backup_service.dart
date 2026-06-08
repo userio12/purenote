@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pointycastle/export.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:workmanager/workmanager.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/services/encryption_service.dart';
 
@@ -334,6 +335,34 @@ class BackupService {
       filePath: path,
       status: status,
     )..copyWith(fileSize: Value(size), errorMessage: Value(error)));
+  }
+
+  static const _backupTaskName = 'purenote-backup';
+
+  static Future<void> rescheduleBackup({
+    required bool autoBackup,
+    required String interval,
+  }) async {
+    await Workmanager().cancelByUniqueName(_backupTaskName);
+    if (!autoBackup) return;
+
+    final frequency = switch (interval) {
+      'weekly' => const Duration(days: 7),
+      'monthly' => const Duration(days: 30),
+      _ => const Duration(hours: 24),
+    };
+
+    await Workmanager().registerPeriodicTask(
+      _backupTaskName,
+      _backupTaskName,
+      frequency: frequency,
+      constraints: Constraints(
+        networkType: NetworkType.connected,
+        requiresBatteryNotLow: true,
+        requiresStorageNotLow: true,
+      ),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+    );
   }
 
   Future<void> _pruneOldBackups() async {

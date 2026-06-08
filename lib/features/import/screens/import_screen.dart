@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/services/attachment_service.dart';
 import 'package:purenote/features/import/services/import_service.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class ImportScreen extends ConsumerStatefulWidget {
   const ImportScreen({super.key});
@@ -24,21 +25,21 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Import notes')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.importNotesTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Choose a source format', style: theme.textTheme.titleMedium),
+          Text(AppLocalizations.of(context)!.chooseSourceFormat, style: theme.textTheme.titleMedium),
           const SizedBox(height: 12),
           Row(
             children: [
-              Text('Duplicates: ', style: theme.textTheme.bodyMedium),
+              Text(AppLocalizations.of(context)!.duplicatesLabel, style: theme.textTheme.bodyMedium),
               DropdownButton<DuplicateHandling>(
                 value: _duplicateHandling,
                 underline: const SizedBox(),
-                items: const [
-                  DropdownMenuItem(value: DuplicateHandling.skip, child: Text('Skip existing')),
-                  DropdownMenuItem(value: DuplicateHandling.import, child: Text('Import all')),
+                items: [
+                  DropdownMenuItem(value: DuplicateHandling.skip, child: Text(AppLocalizations.of(context)!.skipExisting)),
+                  DropdownMenuItem(value: DuplicateHandling.import, child: Text(AppLocalizations.of(context)!.importAll)),
                 ],
                 onChanged: (v) {
                   if (v != null) setState(() => _duplicateHandling = v);
@@ -49,24 +50,24 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           const SizedBox(height: 8),
           _SourceCard(
             icon: Icons.language,
-            title: 'Google Keep',
-            subtitle: 'Import from Keep Takeout HTML files',
+            title: AppLocalizations.of(context)!.googleKeep,
+            subtitle: AppLocalizations.of(context)!.googleKeepSubtitle,
             selected: _selectedSource == ImportSource.keep,
             onTap: () => _pickFile(ImportSource.keep),
           ),
           const SizedBox(height: 8),
           _SourceCard(
             icon: Icons.note,
-            title: 'Evernote',
-            subtitle: 'Import from ENEX export files',
+            title: AppLocalizations.of(context)!.evernote,
+            subtitle: AppLocalizations.of(context)!.evernoteSubtitle,
             selected: _selectedSource == ImportSource.evernote,
             onTap: () => _pickFile(ImportSource.evernote),
           ),
           const SizedBox(height: 8),
           _SourceCard(
             icon: Icons.description,
-            title: 'Quillpad',
-            subtitle: 'Import from Quillpad JSON export',
+            title: AppLocalizations.of(context)!.quillpad,
+            subtitle: AppLocalizations.of(context)!.quillpadSubtitle,
             selected: _selectedSource == ImportSource.quillpad,
             onTap: () => _pickFile(ImportSource.quillpad),
           ),
@@ -91,14 +92,14 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                       size: 48,
                     ),
                     const SizedBox(height: 12),
-                    Text('Import complete', style: theme.textTheme.titleMedium),
+                    Text(AppLocalizations.of(context)!.importComplete, style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
-                    Text('${_result!.imported} imported'),
-                    if (_result!.skipped > 0) Text('${_result!.skipped} skipped'),
-                    if (_result!.failed > 0) Text('${_result!.failed} failed'),
+                    Text(AppLocalizations.of(context)!.importedCount(_result!.imported)),
+                    if (_result!.skipped > 0) Text(AppLocalizations.of(context)!.skippedCount(_result!.skipped)),
+                    if (_result!.failed > 0) Text(AppLocalizations.of(context)!.failedCount(_result!.failed)),
                     if (_result!.errors.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text('Errors:', style: theme.textTheme.labelLarge),
+                      Text(AppLocalizations.of(context)!.errorsLabel, style: theme.textTheme.labelLarge),
                       ..._result!.errors.map((e) => Text(e, style: theme.textTheme.bodySmall)),
                     ],
                   ],
@@ -130,7 +131,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     setState(() {
       _selectedSource = source;
       _result = null;
-      _progress = ImportProgress(current: 0, total: 0, message: 'Starting import...');
+      _progress = ImportProgress(current: 0, total: 0, message: AppLocalizations.of(context)!.startingImport);
     });
 
     try {

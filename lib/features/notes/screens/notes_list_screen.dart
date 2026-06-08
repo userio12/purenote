@@ -12,6 +12,7 @@ import 'package:purenote/features/notes/providers/notes_provider.dart';
 import 'package:purenote/features/notes/widgets/note_card.dart';
 import 'package:purenote/features/notes/widgets/note_tile.dart';
 import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 final _selectedIdsProvider = StateProvider<Set<String>>((_) => {});
 
@@ -53,11 +54,11 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete notes'),
-        content: Text('Delete ${ids.length} note${ids.length == 1 ? '' : 's'}?'),
+        title: Text(AppLocalizations.of(context)!.deleteNotes),
+        content: Text(AppLocalizations.of(context)!.deleteNotesConfirm(ids.length)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context)!.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(AppLocalizations.of(context)!.delete)),
         ],
       ),
     );
@@ -113,7 +114,7 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
       appBar: AppBar(
         title: isSelectionMode
             ? Text('${selectedIds.length} selected')
-            : const Text('Notes'),
+            : Text(AppLocalizations.of(context)!.notes),
         leading: isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),
@@ -125,23 +126,23 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
             IconButton(
               icon: const Icon(Icons.push_pin),
               onPressed: () => _bulkPin(true),
-              tooltip: 'Pin all',
+              tooltip: AppLocalizations.of(context)!.pinAll,
             ),
             IconButton(
               icon: const Icon(Icons.label_outline),
               onPressed: _bulkLabel,
-              tooltip: 'Add label',
+              tooltip: AppLocalizations.of(context)!.addLabel,
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline),
               onPressed: _bulkDelete,
-              tooltip: 'Delete all',
+              tooltip: AppLocalizations.of(context)!.deleteAll,
             ),
           ] else ...[
             PopupMenuButton<String>(
               initialValue: settings.sortBy,
               icon: const Icon(Icons.sort),
-              tooltip: 'Sort by',
+              tooltip: AppLocalizations.of(context)!.sortBy,
               onSelected: (value) {
                 if (value == settings.sortBy) {
                   ref.read(settingsNotifierProvider.notifier).update(
@@ -161,14 +162,14 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
                       if (settings.sortBy == 'modified')
                         Icon(Icons.check, size: 18, color: Theme.of(context).colorScheme.primary),
                       const SizedBox(width: 8),
-                      Text(settings.sortBy == 'modified' && settings.sortAscending ? 'Oldest' : 'Latest'),
+                      Text(settings.sortBy == 'modified' && settings.sortAscending ? AppLocalizations.of(context)!.oldest : AppLocalizations.of(context)!.latest),
                     ],
                   ),
                 ),
                 PopupMenuDivider(),
-                const PopupMenuItem(value: 'title', child: Text('Title')),
-                const PopupMenuItem(value: 'created', child: Text('Created')),
-                const PopupMenuItem(value: 'modified', child: Text('Modified')),
+                PopupMenuItem(value: 'title', child: Text(AppLocalizations.of(context)!.sortTitle)),
+                PopupMenuItem(value: 'created', child: Text(AppLocalizations.of(context)!.sortCreated)),
+                PopupMenuItem(value: 'modified', child: Text(AppLocalizations.of(context)!.sortModified)),
               ],
             ),
             IconButton(
@@ -180,12 +181,12 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
                   settings.copyWith(viewMode: settings.viewMode == 0 ? 1 : 0),
                 );
               },
-              tooltip: settings.viewMode == 0 ? 'Grid view' : 'List view',
+              tooltip: settings.viewMode == 0 ? AppLocalizations.of(context)!.gridView : AppLocalizations.of(context)!.listView,
             ),
             IconButton(
               icon: const Icon(Icons.search),
               onPressed: () => context.push('/search'),
-              tooltip: 'Search notes',
+              tooltip: AppLocalizations.of(context)!.searchNotes,
             ),
           ],
         ],
@@ -218,7 +219,7 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
                             Padding(
                               padding: const EdgeInsets.only(right: 6),
                               child: FilterChip(
-                                label: const Text('All'),
+                                label: Text(AppLocalizations.of(context)!.all),
                                 selected: _selectedLabelId == null,
                                 onSelected: (_) => setState(() => _selectedLabelId = null),
                                 visualDensity: VisualDensity.compact,
@@ -284,7 +285,7 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
       floatingActionButton: !isSelectionMode
           ? FloatingActionButton(
               onPressed: () => context.push('/note/new'),
-              tooltip: 'New note',
+              tooltip: AppLocalizations.of(context)!.newNote,
               child: const Icon(Icons.add),
             )
           : null,
@@ -332,9 +333,9 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Note deleted'),
+        content: Text(AppLocalizations.of(context)!.noteDeleted),
         action: SnackBarAction(
-          label: 'Undo',
+          label: AppLocalizations.of(context)!.undo,
           onPressed: () async {
             if (deletedNote != null) {
               final dao = ref.read(noteDaoProvider);
@@ -381,7 +382,7 @@ class _ListNotesView extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.only(top: 8, bottom: 4),
             child: Text(
-              'Others',
+              AppLocalizations.of(context)!.others,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
@@ -495,14 +496,14 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            hasFilter ? 'No matching notes' : 'No notes yet',
+            hasFilter ? AppLocalizations.of(context)!.noMatchingNotes : AppLocalizations.of(context)!.noNotesYet,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Colors.grey.shade600,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            hasFilter ? 'Try a different filter' : 'Tap + to create your first note',
+            hasFilter ? AppLocalizations.of(context)!.tryDifferentFilter : AppLocalizations.of(context)!.tapToCreateFirstNote,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey.shade500,
             ),
@@ -526,7 +527,7 @@ class _ErrorState extends StatelessWidget {
           Icon(Icons.error_outline, size: 48, color: Colors.grey.shade500),
           const SizedBox(height: 16),
           Text(
-            'Could not load notes',
+            AppLocalizations.of(context)!.couldNotLoadNotes,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Colors.grey.shade600,
             ),
@@ -535,7 +536,7 @@ class _ErrorState extends StatelessWidget {
           FilledButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(AppLocalizations.of(context)!.retry),
           ),
         ],
       ),

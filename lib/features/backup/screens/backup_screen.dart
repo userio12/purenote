@@ -5,6 +5,7 @@ import 'package:purenote/core/services/backup_service.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/providers/settings_provider.dart';
 import 'package:purenote/features/backup/providers/backup_provider.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class BackupScreen extends ConsumerStatefulWidget {
   const BackupScreen({super.key});
@@ -22,14 +23,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final settings = ref.watch(settingsNotifierProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Backup & Restore')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.backupAndRestoreTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _sectionHeader(context, 'Auto-backup'),
+          _sectionHeader(context, AppLocalizations.of(context)!.autoBackupSection),
           SwitchListTile(
-            title: const Text('Auto backup'),
-            subtitle: Text(settings.autoBackup ? 'Enabled (${settings.backupInterval})' : 'Disabled'),
+            title: Text(AppLocalizations.of(context)!.autoBackup),
+            subtitle: Text(settings.autoBackup ? AppLocalizations.of(context)!.autoBackupEnabled(settings.backupInterval) : AppLocalizations.of(context)!.autoBackupDisabled),
             value: settings.autoBackup,
             onChanged: (v) {
               ref.read(settingsNotifierProvider.notifier).update(
@@ -39,13 +40,13 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           ),
           if (settings.autoBackup) ...[
             ListTile(
-              title: const Text('Interval'),
+              title: Text(AppLocalizations.of(context)!.backupInterval),
               trailing: DropdownButton<String>(
                 value: settings.backupInterval,
-                items: const [
-                  DropdownMenuItem(value: 'daily', child: Text('Daily')),
-                  DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
-                  DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                items: [
+                  DropdownMenuItem(value: 'daily', child: Text(AppLocalizations.of(context)!.backupDaily)),
+                  DropdownMenuItem(value: 'weekly', child: Text(AppLocalizations.of(context)!.backupWeekly)),
+                  DropdownMenuItem(value: 'monthly', child: Text(AppLocalizations.of(context)!.backupMonthly)),
                 ],
                 onChanged: (v) {
                   if (v != null) {
@@ -57,8 +58,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
             ),
             SwitchListTile(
-              title: const Text('Include attachment files'),
-              subtitle: const Text('Increases backup size'),
+              title: Text(AppLocalizations.of(context)!.includeAttachmentFiles),
+              subtitle: Text(AppLocalizations.of(context)!.includeAttachmentFilesSubtitle),
               value: settings.backupIncludeFiles,
               onChanged: (v) {
                 ref.read(settingsNotifierProvider.notifier).update(
@@ -68,10 +69,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             ),
           ],
           const Divider(),
-          _sectionHeader(context, 'Manual backup'),
+          _sectionHeader(context, AppLocalizations.of(context)!.manualBackupSection),
           SwitchListTile(
-            title: const Text('Password protect backup'),
-            subtitle: const Text('Enter a password when creating or restoring'),
+            title: Text(AppLocalizations.of(context)!.passwordProtectBackup),
+            subtitle: Text(AppLocalizations.of(context)!.passwordProtectBackupSubtitle),
             value: settings.backupPasswordProtected,
             onChanged: (v) {
               ref.read(settingsNotifierProvider.notifier).update(
@@ -85,7 +86,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             icon: _creating
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.backup),
-            label: Text(_creating ? 'Creating...' : 'Back up now'),
+            label: Text(_creating ? AppLocalizations.of(context)!.creating : AppLocalizations.of(context)!.backUpNow),
           ),
           const SizedBox(height: 8),
           FilledButton.tonalIcon(
@@ -93,10 +94,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             icon: _restoring
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.restore),
-            label: Text(_restoring ? 'Restoring...' : 'Restore from backup'),
+            label: Text(_restoring ? AppLocalizations.of(context)!.restoring : AppLocalizations.of(context)!.restoreFromBackup),
           ),
           const Divider(),
-          _sectionHeader(context, 'Backup history'),
+          _sectionHeader(context, AppLocalizations.of(context)!.backupHistory),
           _BackupHistory(),
         ],
       ),
@@ -107,7 +108,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final settings = ref.read(settingsNotifierProvider);
     String? password;
     if (settings.backupPasswordProtected) {
-      password = await _promptPassword(context, 'Set backup password');
+      password = await _promptPassword(context, AppLocalizations.of(context)!.backupPassword);
       if (password == null) return;
     }
 
@@ -121,13 +122,13 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Backup saved')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.backupSaved)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Backup failed: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.backupFailed(e.toString()))),
         );
       }
     } finally {
@@ -155,7 +156,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
       String? password;
       if (data.passwordProtected) {
-        password = await _promptPassword(context, 'Backup password');
+        password = await _promptPassword(context, AppLocalizations.of(context)!.backupPassword);
         if (password == null) return;
       }
 
@@ -163,7 +164,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Restore backup?'),
+          title: Text(AppLocalizations.of(context)!.restoreBackupConfirm),
           content: Text(
             'This will replace all current data.\n\n'
             '${data.noteCount} notes\n'
@@ -172,10 +173,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             'A pre-restore backup will be created first.',
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(AppLocalizations.of(context)!.cancel)),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Restore'),
+              child: Text(AppLocalizations.of(context)!.restore),
             ),
           ],
         ),
@@ -191,13 +192,13 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Restore completed')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.restoreCompleted)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Restore failed: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.restoreFailed(e.toString()))),
         );
       }
     } finally {
@@ -205,25 +206,25 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     }
   }
 
-  Future<String?> _promptPassword(BuildContext context, [String title = 'Backup password']) {
+  Future<String?> _promptPassword(BuildContext context, String title) {
     final controller = TextEditingController();
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Backup password'),
+        title: Text(title),
         content: TextField(
           controller: controller,
           obscureText: true,
-          decoration: const InputDecoration(
-            hintText: 'Enter backup password',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: AppLocalizations.of(context)!.enterBackupPassword,
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(AppLocalizations.of(context)!.cancel)),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('OK'),
+            child: Text(AppLocalizations.of(context)!.ok),
           ),
         ],
       ),
@@ -257,14 +258,14 @@ class _BackupHistory extends ConsumerWidget {
 
     return historyAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      error: (e, _) => Text('Failed to load history: $e'),
+      error: (e, _) => Text(AppLocalizations.of(context)!.failedToLoadHistory(e.toString())),
       data: (logs) {
         if (logs.isEmpty) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Center(
               child: Text(
-                'No backups yet',
+                AppLocalizations.of(context)!.noBackupsYet,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 ),

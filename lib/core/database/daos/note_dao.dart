@@ -56,9 +56,11 @@ class NoteDao {
 
   Future<Result<void>> updateNote(Note note) async {
     try {
-      await _syncFtsDelete(note.id);
-      await (_db.update(_db.notes)..where((n) => n.id.equals(note.id))).write(note.toCompanion(false));
-      await _syncFtsInsert(note);
+      await _db.transaction(() async {
+        await _syncFtsDelete(note.id);
+        await (_db.update(_db.notes)..where((n) => n.id.equals(note.id))).write(note.toCompanion(false));
+        await _syncFtsInsert(note);
+      });
       return const Ok(null);
     } catch (e, s) {
       ErrorLogger.logError('Failed to update note', error: e, stackTrace: s);
@@ -68,10 +70,12 @@ class NoteDao {
 
   Future<Result<void>> updateFields(NotesCompanion companion) async {
     try {
-      await _syncFtsDelete(companion.id.value);
-      await (_db.update(_db.notes)..where((n) => n.id.equals(companion.id.value))).write(companion);
-      final note = await getById(companion.id.value);
-      if (note != null) await _syncFtsInsert(note);
+      await _db.transaction(() async {
+        await _syncFtsDelete(companion.id.value);
+        await (_db.update(_db.notes)..where((n) => n.id.equals(companion.id.value))).write(companion);
+        final note = await getById(companion.id.value);
+        if (note != null) await _syncFtsInsert(note);
+      });
       return const Ok(null);
     } catch (e, s) {
       ErrorLogger.logError('Failed to update note fields', error: e, stackTrace: s);

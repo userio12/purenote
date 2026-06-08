@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class AppScaffold extends StatefulWidget {
   final Widget child;
@@ -86,21 +87,21 @@ class _AppScaffoldState extends State<AppScaffold> {
               break;
           }
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.note_outlined),
-            selectedIcon: Icon(Icons.note),
-            label: 'Notes',
+            icon: const Icon(Icons.note_outlined),
+            selectedIcon: const Icon(Icons.note),
+            label: AppLocalizations.of(context)!.notes,
           ),
           NavigationDestination(
-            icon: Icon(Icons.checklist_outlined),
-            selectedIcon: Icon(Icons.checklist),
-            label: 'Tasks',
+            icon: const Icon(Icons.checklist_outlined),
+            selectedIcon: const Icon(Icons.checklist),
+            label: AppLocalizations.of(context)!.tasks,
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: AppLocalizations.of(context)!.settings,
           ),
         ],
       ),

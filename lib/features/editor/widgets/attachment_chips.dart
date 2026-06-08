@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/services/attachment_service.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class AttachmentChips extends StatelessWidget {
   final List<Attachment> attachments;
@@ -39,7 +40,7 @@ class AttachmentChips extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
-          Text('Attachments', style: theme.textTheme.labelSmall),
+          Text(AppLocalizations.of(context)!.attachments, style: theme.textTheme.labelSmall),
           const SizedBox(height: 4),
           Wrap(
             spacing: 8,
@@ -58,17 +59,17 @@ class AttachmentChips extends StatelessWidget {
               ),
               ActionChip(
                 avatar: const Icon(Icons.add, size: 18),
-                label: const Text('Add', style: TextStyle(fontSize: 13)),
+                label: Text(AppLocalizations.of(context)!.add, style: const TextStyle(fontSize: 13)),
                 onPressed: onAdd,
               ),
               ActionChip(
                 avatar: const Icon(Icons.image, size: 18),
-                label: const Text('Image', style: TextStyle(fontSize: 13)),
+                label: Text(AppLocalizations.of(context)!.attachmentImage, style: const TextStyle(fontSize: 13)),
                 onPressed: onAddImage,
               ),
               ActionChip(
                 avatar: const Icon(Icons.camera_alt, size: 18),
-                label: const Text('Camera', style: TextStyle(fontSize: 13)),
+                label: Text(AppLocalizations.of(context)!.attachmentCamera, style: const TextStyle(fontSize: 13)),
                 onPressed: onAddCamera,
               ),
             ],

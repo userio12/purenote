@@ -5,6 +5,7 @@ import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/features/labels/providers/labels_provider.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 Future<List<Label>?> showLabelPickerSheet(
   BuildContext context, {
@@ -51,18 +52,18 @@ class _LabelPickerSheetState extends ConsumerState<_LabelPickerSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Labels', style: theme.textTheme.titleMedium),
+          Text(AppLocalizations.of(context)!.labelsTitle, style: theme.textTheme.titleMedium),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _newLabelController,
-                  decoration: const InputDecoration(
-                    hintText: 'New label name',
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context)!.newLabelName,
                     isDense: true,
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
                   onSubmitted: (v) { _createLabel(v); },
                 ),
@@ -71,7 +72,7 @@ class _LabelPickerSheetState extends ConsumerState<_LabelPickerSheet> {
               FilledButton.tonalIcon(
                 onPressed: () => _createLabel(_newLabelController.text),
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add'),
+                label: Text(AppLocalizations.of(context)!.add),
               ),
             ],
           ),
@@ -85,7 +86,7 @@ class _LabelPickerSheetState extends ConsumerState<_LabelPickerSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Center(
                     child: Text(
-                      'No labels yet. Create one above.',
+                      AppLocalizations.of(context)!.noLabelsinYet,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
@@ -127,7 +128,7 @@ class _LabelPickerSheetState extends ConsumerState<_LabelPickerSheet> {
                 final selectedLabels = allLabels.where((l) => _selectedIds.contains(l.id)).toList();
                 Navigator.of(context).pop(selectedLabels);
               },
-              child: const Text('Apply'),
+              child: Text(AppLocalizations.of(context)!.apply),
             ),
           ),
         ],

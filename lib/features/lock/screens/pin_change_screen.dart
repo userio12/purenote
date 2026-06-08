@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:purenote/core/services/auth_service.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class PinChangeScreen extends StatefulWidget {
   const PinChangeScreen({super.key});
@@ -14,7 +15,7 @@ class _PinChangeScreenState extends State<PinChangeScreen> {
   final _focusNodes = List.generate(6, (_) => FocusNode());
   int _step = 0; // 0: old PIN, 1: new PIN, 2: confirm
   String? _newPin;
-  String? _error;
+  String? _errorKey;
 
   @override
   void dispose() {
@@ -26,7 +27,7 @@ class _PinChangeScreenState extends State<PinChangeScreen> {
   String get _pin => _controllers.map((c) => c.text).join();
 
   void _onDigit(int digit) {
-    setState(() => _error = null);
+    setState(() => _errorKey = null);
     for (var i = 0; i < 6; i++) {
       if (_controllers[i].text.isEmpty) {
         _controllers[i].text = digit.toString();
@@ -58,7 +59,7 @@ class _PinChangeScreenState extends State<PinChangeScreen> {
         });
       } else {
         setState(() {
-          _error = 'Wrong PIN';
+          _errorKey = 'wrongPin';
           _clearInput();
         });
       }
@@ -74,7 +75,7 @@ class _PinChangeScreenState extends State<PinChangeScreen> {
         if (mounted) Navigator.of(context).pop();
       } else {
         setState(() {
-          _error = 'PINs do not match';
+          _errorKey = 'pinsDoNotMatch';
           _step = 1;
           _newPin = null;
           _clearInput();
@@ -88,23 +89,24 @@ class _PinChangeScreenState extends State<PinChangeScreen> {
     _focusNodes[0].requestFocus();
   }
 
-  String get _title {
+  String _title(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     switch (_step) {
-      case 0: return 'Enter current PIN';
-      case 1: return 'Enter new PIN';
-      case 2: return 'Confirm new PIN';
-      default: return 'Change PIN';
+      case 0: return l10n.enterCurrentPin;
+      case 1: return l10n.enterNewPin;
+      case 2: return l10n.confirmNewPin;
+      default: return l10n.changePin;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Change PIN')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.changePin)),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(_title, style: Theme.of(context).textTheme.titleMedium),
+          Text(_title(context), style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 32),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -132,9 +134,14 @@ class _PinChangeScreenState extends State<PinChangeScreen> {
               ),
             ),
           ),
-          if (_error != null) ...[
+          if (_errorKey != null) ...[
             const SizedBox(height: 16),
-            Text(_error!, style: const TextStyle(color: Colors.red)),
+            Text(
+              _errorKey == 'wrongPin'
+                  ? AppLocalizations.of(context)!.wrongPin
+                  : AppLocalizations.of(context)!.pinsDoNotMatch,
+              style: const TextStyle(color: Colors.red),
+            ),
           ],
           const SizedBox(height: 32),
           _buildNumpad(),
@@ -168,7 +175,7 @@ class _PinChangeScreenState extends State<PinChangeScreen> {
         const SizedBox(height: 16),
         FilledButton(
           onPressed: _controllers.every((c) => c.text.isNotEmpty) ? _onSubmit : null,
-          child: Text(['Verify', 'Continue', 'Confirm'][_step]),
+          child: Text([AppLocalizations.of(context)!.verify, AppLocalizations.of(context)!.continueBtn, AppLocalizations.of(context)!.confirm][_step]),
         ),
       ],
     );

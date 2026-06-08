@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:path/path.dart' as p;
@@ -12,13 +13,14 @@ import 'package:purenote/core/services/attachment_service.dart';
 import 'package:purenote/core/services/backup_service.dart';
 import 'package:purenote/core/services/notification_service.dart';
 import 'package:purenote/core/services/widget_service.dart';
-import 'package:purenote/core/theme/app_theme.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/database/daos/note_dao.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/providers/settings_provider.dart';
+import 'package:purenote/core/providers/theme_provider.dart';
 import 'package:purenote/features/lock/providers/lock_state_provider.dart';
 import 'package:purenote/features/lock/screens/pin_entry_screen.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 const _backupTaskName = 'purenote-backup';
 const _rescheduleTaskName = 'purenote-reschedule';
@@ -76,17 +78,6 @@ Future<void> main() async {
       HomeWidget.registerInteractivityCallback(widgetBackgroundCallback);
       await Workmanager().initialize(callbackDispatcher);
       await Workmanager().registerPeriodicTask(
-        _backupTaskName,
-        _backupTaskName,
-        frequency: const Duration(hours: 24),
-        constraints: Constraints(
-          networkType: NetworkType.connected,
-          requiresBatteryNotLow: true,
-          requiresStorageNotLow: true,
-        ),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
-      );
-      await Workmanager().registerPeriodicTask(
         _rescheduleTaskName,
         _rescheduleTaskName,
         frequency: const Duration(hours: 6),
@@ -128,11 +119,17 @@ class _PurenoteAppState extends ConsumerState<PurenoteApp> with WidgetsBindingOb
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    Future.microtask(() async {
-      ref.read(settingsNotifierProvider.notifier).load();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(settingsNotifierProvider.notifier).load();
+      final settings = ref.read(settingsNotifierProvider);
+      try {
+        await BackupService.rescheduleBackup(
+          autoBackup: settings.autoBackup,
+          interval: settings.backupInterval,
+        );
+      } catch (_) {}
       final noteDao = ref.read(noteDaoProvider);
       final labelDao = ref.read(labelDaoProvider);
-      final settings = ref.read(settingsNotifierProvider);
       unawaited(WidgetService.updateWidgetData(
         noteDao,
         labelDao: labelDao,
@@ -197,6 +194,7 @@ class _PurenoteAppState extends ConsumerState<PurenoteApp> with WidgetsBindingOb
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsNotifierProvider);
     final isLocked = ref.watch(lockStateProvider);
+    final theme = ref.watch(appThemeProvider);
 
     return Stack(
       textDirection: TextDirection.ltr,
@@ -204,9 +202,15 @@ class _PurenoteAppState extends ConsumerState<PurenoteApp> with WidgetsBindingOb
         MaterialApp.router(
           title: 'purenote',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
+          theme: theme,
           themeMode: settings.themeMode,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('en')],
           routerConfig: appRouter,
         ),
         if (isLocked)
@@ -221,16 +225,9 @@ class _PurenoteAppState extends ConsumerState<PurenoteApp> with WidgetsBindingOb
 
   Future<void> _clearTempDir() async {
     try {
-      final tempDir = Directory.systemTemp;
-      if (await tempDir.exists()) {
-        final contents = await tempDir.list().toList();
-        for (final entity in contents) {
-          if (entity is File) {
-            try { await entity.delete(); } catch (_) {}
-          } else if (entity is Directory) {
-            try { await entity.delete(recursive: true); } catch (_) {}
-          }
-        }
+      final purenoteTemp = Directory(p.join(Directory.systemTemp.path, 'purenote_temp'));
+      if (await purenoteTemp.exists()) {
+        await purenoteTemp.delete(recursive: true);
       }
     } catch (_) {}
   }

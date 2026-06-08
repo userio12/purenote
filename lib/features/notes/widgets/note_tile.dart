@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:purenote/core/database/database.dart';
+import 'package:purenote/core/utils/date_formatter.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class NoteTile extends StatelessWidget {
   final Note note;
@@ -61,7 +63,7 @@ class NoteTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            note.title.isEmpty ? 'Untitled' : note.title,
+                            note.title.isEmpty ? AppLocalizations.of(context)!.untitled : note.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
@@ -95,7 +97,7 @@ class NoteTile extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          'Locked note',
+                          AppLocalizations.of(context)!.lockedNote,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                             fontStyle: FontStyle.italic,
@@ -156,7 +158,7 @@ class NoteTile extends StatelessWidget {
                 IconButton(
                   icon: Icon(Icons.delete_outline, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
                   onPressed: onDelete,
-                  tooltip: 'Delete',
+                  tooltip: AppLocalizations.of(context)!.delete,
                 ),
               if (onPin != null)
                 IconButton(
@@ -168,7 +170,7 @@ class NoteTile extends StatelessWidget {
                         : theme.colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                   onPressed: onPin,
-                  tooltip: note.isPinned ? 'Unpin' : 'Pin',
+                  tooltip: note.isPinned ? AppLocalizations.of(context)!.unpin : AppLocalizations.of(context)!.pin,
                 ),
             ],
           ),
@@ -177,18 +179,5 @@ class NoteTile extends StatelessWidget {
     );
   }
 
-  String _formatDate(int epochMs) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(epochMs);
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inDays == 0) {
-      if (diff.inHours == 0) return 'Just now';
-      return '${diff.inHours}h ago';
-    }
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    final months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    if (dt.year == now.year) return '${months[dt.month]} ${dt.day}';
-    return '${months[dt.month]} ${dt.day}, ${dt.year}';
-  }
+  String _formatDate(int epochMs) => DateFormatter.formatRelative(epochMs);
 }

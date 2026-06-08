@@ -7,6 +7,7 @@ import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/features/labels/providers/labels_provider.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class LabelsManagementScreen extends ConsumerWidget {
   const LabelsManagementScreen({super.key});
@@ -17,7 +18,7 @@ class LabelsManagementScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Labels')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.labelsTitle)),
       body: labelsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         error: (e, _) => Center(child: Text('Failed to load labels: $e')),
@@ -29,12 +30,12 @@ class LabelsManagementScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.label_outline, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
                   const SizedBox(height: 16),
-                  Text('No labels yet', style: theme.textTheme.titleMedium),
+                  Text(AppLocalizations.of(context)!.noLabelsYet, style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
                   FilledButton.tonalIcon(
                     onPressed: () => _createLabel(context, ref),
                     icon: const Icon(Icons.add),
-                    label: const Text('Create label'),
+                    label: Text(AppLocalizations.of(context)!.createLabel),
                   ),
                 ],
               ),
@@ -74,7 +75,7 @@ class LabelsManagementScreen extends ConsumerWidget {
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   onPressed: () => _deleteLabel(context, ref, label),
-                  tooltip: 'Delete',
+                  tooltip: AppLocalizations.of(context)!.delete,
                 ),
                 onTap: () => _renameLabel(context, ref, label),
               );
@@ -94,21 +95,21 @@ class LabelsManagementScreen extends ConsumerWidget {
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('New label'),
+        title: Text(AppLocalizations.of(context)!.newLabel),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Label name',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: AppLocalizations.of(context)!.labelName,
+            border: const OutlineInputBorder(),
           ),
           onSubmitted: (v) => Navigator.of(ctx).pop(v),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(AppLocalizations.of(context)!.cancel)),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('Create'),
+            child: Text(AppLocalizations.of(context)!.create),
           ),
         ],
       ),
@@ -131,21 +132,21 @@ class LabelsManagementScreen extends ConsumerWidget {
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rename label'),
+        title: Text(AppLocalizations.of(context)!.renameLabel),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Label name',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: AppLocalizations.of(context)!.labelName,
+            border: const OutlineInputBorder(),
           ),
           onSubmitted: (v) => Navigator.of(ctx).pop(v),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(AppLocalizations.of(context)!.cancel)),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('Rename'),
+            child: Text(AppLocalizations.of(context)!.rename),
           ),
         ],
       ),
@@ -166,14 +167,14 @@ class LabelsManagementScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete label?'),
-        content: Text('Notes with label "${label.name}" will be unlabeled.'),
+        title: Text(AppLocalizations.of(context)!.deleteLabelTitle),
+        content: Text(AppLocalizations.of(context)!.deleteLabelConfirm(label.name)),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(AppLocalizations.of(context)!.cancel)),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context)!.delete),
           ),
         ],
       ),

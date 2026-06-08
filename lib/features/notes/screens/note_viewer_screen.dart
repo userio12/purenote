@@ -17,6 +17,7 @@ import 'package:purenote/core/utils/delta_utils.dart';
 import 'package:purenote/features/notes/providers/notes_provider.dart';
 import 'package:purenote/features/labels/widgets/label_chip.dart';
 import 'package:purenote/features/audio/widgets/audio_player_widget.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class NoteViewerScreen extends ConsumerStatefulWidget {
   final String noteId;
@@ -54,11 +55,11 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete note'),
-        content: Text('Delete "${note.title.isEmpty ? 'Untitled' : note.title}"?'),
+        title: Text(AppLocalizations.of(context)!.deleteNote),
+        content: Text(AppLocalizations.of(context)!.deleteNoteConfirm(note.title.isEmpty ? AppLocalizations.of(context)!.untitled : note.title)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context)!.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(AppLocalizations.of(context)!.delete)),
         ],
       ),
     );
@@ -80,18 +81,18 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
 
     return noteAsync.when(
       loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Note')),
+        appBar: AppBar(title: Text(AppLocalizations.of(context)!.notes)),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (e, _) => Scaffold(
-        appBar: AppBar(title: const Text('Note')),
+        appBar: AppBar(title: Text(AppLocalizations.of(context)!.notes)),
         body: Center(child: Text('Error: $e')),
       ),
       data: (note) {
         if (note == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Note')),
-            body: const Center(child: Text('Note not found')),
+            appBar: AppBar(title: Text(AppLocalizations.of(context)!.notes)),
+            body: Center(child: Text(AppLocalizations.of(context)!.noteNotFound)),
           );
         }
 
@@ -101,27 +102,27 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(note.title.isNotEmpty ? note.title : 'Note'),
+            title: Text(note.title.isNotEmpty ? note.title : AppLocalizations.of(context)!.notes),
             actions: [
               IconButton(
                 icon: Icon(note.isLocked ? Icons.lock : Icons.lock_open),
                 onPressed: () => _toggleLock(note, ref.read(noteDaoProvider)),
-                tooltip: note.isLocked ? 'Unlock' : 'Lock',
+                tooltip: note.isLocked ? AppLocalizations.of(context)!.unlock : AppLocalizations.of(context)!.lock,
               ),
               IconButton(
                 icon: const Icon(Icons.share),
                 onPressed: () => _shareNote(note),
-                tooltip: 'Share',
+                tooltip: AppLocalizations.of(context)!.share,
               ),
               IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () => context.push('/note/${note.id}'),
-                tooltip: 'Edit',
+                tooltip: AppLocalizations.of(context)!.edit,
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline),
                 onPressed: () => _deleteNote(note, ref.read(noteDaoProvider)),
-                tooltip: 'Delete',
+                tooltip: AppLocalizations.of(context)!.delete,
               ),
             ],
           ),
@@ -139,11 +140,11 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
           children: [
             Icon(Icons.lock, size: 48, color: Colors.grey.shade400),
             const SizedBox(height: 16),
-            Text('Locked note', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600)),
+            Text(AppLocalizations.of(context)!.lockedNote, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600)),
             const SizedBox(height: 8),
             FilledButton(
               onPressed: () => _toggleLock(note, ref.read(noteDaoProvider)),
-              child: const Text('Unlock'),
+              child: Text(AppLocalizations.of(context)!.unlock),
             ),
           ],
         ),
@@ -163,7 +164,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              note.title.isNotEmpty ? note.title : 'Untitled',
+              note.title.isNotEmpty ? note.title : AppLocalizations.of(context)!.untitled,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -172,7 +173,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
                 Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
                 const SizedBox(width: 4),
                 Text(
-                  'Created: ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.createdAt))}',
+                  AppLocalizations.of(context)!.createdLabel(dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.createdAt))),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
                 ),
               ],
@@ -183,7 +184,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
                 Icon(Icons.update, size: 14, color: Colors.grey.shade500),
                 const SizedBox(width: 4),
                 Text(
-                  'Updated: ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.updatedAt))}',
+                  AppLocalizations.of(context)!.updatedLabel(dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.updatedAt))),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
                 ),
               ],
@@ -195,7 +196,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
                   Icon(Icons.notifications, size: 14, color: Colors.grey.shade500),
                   const SizedBox(width: 4),
                   Text(
-                    'Reminder: ${dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.reminderAt!))}',
+                    AppLocalizations.of(context)!.reminderLabel(dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.reminderAt!))),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
                   ),
                 ],
@@ -207,7 +208,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
                 children: [
                   Icon(Icons.push_pin, size: 14, color: Colors.grey.shade500),
                   const SizedBox(width: 4),
-                  Text('Pinned', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500)),
+                  Text(AppLocalizations.of(context)!.pinned, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500)),
                 ],
               ),
             ],
@@ -251,7 +252,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
                       children: [
                         const SizedBox(height: 16),
                         const Divider(),
-                        Text('Attachments', style: Theme.of(context).textTheme.titleSmall),
+                        Text(AppLocalizations.of(context)!.attachments, style: Theme.of(context).textTheme.titleSmall),
                         const SizedBox(height: 8),
                         ...attachments.map((a) {
                           if (a.mimeType.startsWith('audio/')) {
@@ -294,7 +295,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
     final result = await OpenFilex.open(attachment.filePath);
     if (result.type != ResultType.done && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open file: ${result.message}')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.couldNotOpenFile(result.message))),
       );
     }
   }

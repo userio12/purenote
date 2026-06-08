@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/features/notes/widgets/note_card.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 final _baseNote = Note(
   id: 'test1', type: 0, title: 'Test Note',
@@ -16,7 +18,16 @@ final _baseNote = Note(
 final _pinnedNote = _baseNote.copyWith(isPinned: true);
 final _lockedNote = _baseNote.copyWith(isLocked: true, content: '');
 
-Widget _wrap(Widget w) => MaterialApp(home: Scaffold(body: w));
+Widget _wrap(Widget w) => MaterialApp(
+  localizationsDelegates: const [
+    AppLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
+  supportedLocales: const [Locale('en')],
+  home: Scaffold(body: w),
+);
 
 void main() {
   group('NoteCard', () {

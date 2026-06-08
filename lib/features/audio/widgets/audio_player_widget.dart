@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class NoteAudioPlayer extends StatefulWidget {
   final String filePath;
@@ -66,7 +67,7 @@ class _NoteAudioPlayerState extends State<NoteAudioPlayer> {
           IconButton(
             icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow, size: 20),
             onPressed: () => _isPlaying ? _player.pause() : _player.resume(),
-            tooltip: _isPlaying ? 'Pause' : 'Play',
+            tooltip: _isPlaying ? AppLocalizations.of(context)!.pause : AppLocalizations.of(context)!.play,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
           Expanded(

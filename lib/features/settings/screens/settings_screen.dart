@@ -7,10 +7,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/providers/settings_provider.dart';
 import 'package:purenote/core/services/auth_service.dart';
+import 'package:purenote/core/services/backup_service.dart';
 import 'package:purenote/core/services/widget_service.dart';
 import 'package:purenote/features/lock/screens/pin_setup_screen.dart';
 import 'package:purenote/features/lock/screens/pin_change_screen.dart';
 import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -18,16 +20,17 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsNotifierProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settings)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _sectionHeader(context, 'View'),
+          _sectionHeader(context, l10n.sectionView),
           ListTile(
-            title: const Text('View mode'),
-            subtitle: Text(settings.viewMode == 0 ? 'List' : 'Grid'),
+            title: Text(l10n.viewMode),
+            subtitle: Text(settings.viewMode == 0 ? l10n.list : l10n.grid),
             trailing: SegmentedButton<int>(
               segments: const [
                 ButtonSegment(value: 0, icon: Icon(Icons.list)),
@@ -42,14 +45,14 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           ListTile(
-            title: const Text('Sort by'),
+            title: Text(l10n.sortBy),
             trailing: DropdownButton<String>(
               value: settings.sortBy,
               underline: const SizedBox(),
-              items: const [
-                DropdownMenuItem(value: 'modified', child: Text('Modified')),
-                DropdownMenuItem(value: 'created', child: Text('Created')),
-                DropdownMenuItem(value: 'title', child: Text('Title')),
+              items: [
+                DropdownMenuItem(value: 'modified', child: Text(l10n.sortModified)),
+                DropdownMenuItem(value: 'created', child: Text(l10n.sortCreated)),
+                DropdownMenuItem(value: 'title', child: Text(l10n.sortTitle)),
               ],
               onChanged: (v) {
                 if (v != null) {
@@ -61,7 +64,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           SwitchListTile(
-            title: const Text('Ascending order'),
+            title: Text(l10n.ascendingOrder),
             value: settings.sortAscending,
             onChanged: (v) {
               ref.read(settingsNotifierProvider.notifier).update(
@@ -70,7 +73,7 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           ListTile(
-            title: const Text('Text size'),
+            title: Text(l10n.textSize),
             subtitle: Slider(
               value: settings.textScale,
               min: 0.7,
@@ -85,14 +88,14 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           ListTile(
-            title: const Text('Theme'),
+            title: Text(l10n.theme),
             trailing: DropdownButton<ThemeMode>(
               value: settings.themeMode,
               underline: const SizedBox(),
-              items: const [
-                DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
-                DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
-                DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+              items: [
+                DropdownMenuItem(value: ThemeMode.system, child: Text(l10n.themeSystem)),
+                DropdownMenuItem(value: ThemeMode.light, child: Text(l10n.themeLight)),
+                DropdownMenuItem(value: ThemeMode.dark, child: Text(l10n.themeDark)),
               ],
               onChanged: (v) {
                 if (v != null) {
@@ -104,36 +107,36 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const Divider(),
-          _sectionHeader(context, 'Security'),
+          _sectionHeader(context, l10n.sectionSecurity),
           FutureBuilder<bool>(
             future: AuthService().isPinSet(),
             builder: (context, snapshot) {
               final isPinSet = snapshot.data ?? false;
               return ListTile(
-                title: const Text('App lock'),
-                subtitle: Text(isPinSet ? 'PIN is set' : 'Not set up'),
+                title: Text(l10n.appLock),
+                subtitle: Text(isPinSet ? l10n.pinIsSet : l10n.notSetUp),
                 trailing: isPinSet
                     ? TextButton(
                         onPressed: () => _removePin(context),
-                        child: const Text('Remove', style: TextStyle(color: Colors.red)),
+                        child: Text(l10n.remove, style: const TextStyle(color: Colors.red)),
                       )
                     : TextButton(
                         onPressed: () => _setupPin(context),
-                        child: const Text('Set up'),
+                        child: Text(l10n.setup),
                       ),
               );
             },
           ),
           ListTile(
-            title: const Text('Lock method'),
-            subtitle: Text(_lockMethodLabel(settings.lockMethod)),
+            title: Text(l10n.lockMethod),
+            subtitle: Text(_lockMethodLabel(context, settings.lockMethod)),
             trailing: DropdownButton<String?>(
               value: settings.lockMethod,
               underline: const SizedBox(),
-              items: const [
-                DropdownMenuItem(value: null, child: Text('PIN only')),
-                DropdownMenuItem(value: 'biometric', child: Text('Biometric only')),
-                DropdownMenuItem(value: 'both', child: Text('PIN or biometric')),
+              items: [
+                DropdownMenuItem(value: null, child: Text(l10n.lockMethodPinOnly)),
+                DropdownMenuItem(value: 'biometric', child: Text(l10n.lockMethodBiometricOnly)),
+                DropdownMenuItem(value: 'both', child: Text(l10n.lockMethodBoth)),
               ],
               onChanged: (v) {
                 ref.read(settingsNotifierProvider.notifier).update(
@@ -143,8 +146,8 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           SwitchListTile(
-            title: const Text('Lock new notes by default'),
-            subtitle: const Text('Newly created notes start locked'),
+            title: Text(l10n.lockNewNotes),
+            subtitle: Text(l10n.lockNewNotesSubtitle),
             value: settings.lockNewNotes,
             onChanged: (v) {
               ref.read(settingsNotifierProvider.notifier).update(
@@ -153,18 +156,18 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           ListTile(
-            title: const Text('Auto-lock timer'),
-            subtitle: Text(_autoLockLabel(settings.autoLockSeconds)),
+            title: Text(l10n.autoLockTimer),
+            subtitle: Text(_autoLockLabel(context, settings.autoLockSeconds)),
             trailing: DropdownButton<int>(
               value: settings.autoLockSeconds,
               underline: const SizedBox(),
-              items: const [
-                DropdownMenuItem(value: 0, child: Text('Immediately')),
-                DropdownMenuItem(value: 15, child: Text('15 seconds')),
-                DropdownMenuItem(value: 30, child: Text('30 seconds')),
-                DropdownMenuItem(value: 60, child: Text('1 minute')),
-                DropdownMenuItem(value: 300, child: Text('5 minutes')),
-                DropdownMenuItem(value: 900, child: Text('15 minutes')),
+              items: [
+                DropdownMenuItem(value: 0, child: Text(l10n.autoLockImmediately)),
+                DropdownMenuItem(value: 15, child: Text(l10n.autoLock15Seconds)),
+                DropdownMenuItem(value: 30, child: Text(l10n.autoLock30Seconds)),
+                DropdownMenuItem(value: 60, child: Text(l10n.autoLock1Minute)),
+                DropdownMenuItem(value: 300, child: Text(l10n.autoLock5Minutes)),
+                DropdownMenuItem(value: 900, child: Text(l10n.autoLock15Minutes)),
               ],
               onChanged: (v) {
                 if (v != null) {
@@ -176,26 +179,26 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           ListTile(
-            title: const Text('Change PIN'),
+            title: Text(l10n.changePin),
             leading: const Icon(Icons.lock_outline),
             onTap: () => _changePin(context),
           ),
           const Divider(),
-          _sectionHeader(context, 'Widget'),
+          _sectionHeader(context, l10n.sectionWidget),
           ListTile(
-            title: const Text('Source'),
+            title: Text(l10n.widgetSource),
             subtitle: Text(settings.widgetSource == 'pinned'
-                ? 'Pinned notes'
+                ? l10n.widgetPinnedNotes
                 : settings.widgetSource == 'label'
-                    ? 'Specific label'
-                    : 'All notes'),
+                    ? l10n.widgetSpecificLabel
+                    : l10n.widgetAllNotes),
             trailing: DropdownButton<String>(
               value: settings.widgetSource,
               underline: const SizedBox(),
-              items: const [
-                DropdownMenuItem(value: 'pinned', child: Text('Pinned notes')),
-                DropdownMenuItem(value: 'all', child: Text('All notes')),
-                DropdownMenuItem(value: 'label', child: Text('Specific label')),
+              items: [
+                DropdownMenuItem(value: 'pinned', child: Text(l10n.widgetPinnedNotes)),
+                DropdownMenuItem(value: 'all', child: Text(l10n.widgetAllNotes)),
+                DropdownMenuItem(value: 'label', child: Text(l10n.widgetSpecificLabel)),
               ],
               onChanged: (v) {
                 if (v != null) {
@@ -208,7 +211,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           if (settings.widgetSource == 'label')
             ListTile(
-              title: const Text('Label'),
+              title: Text(l10n.widgetLabel),
               subtitle: Text(settings.widgetLabel ?? 'Select a label'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
@@ -227,7 +230,7 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
           ListTile(
-            title: const Text('Max items'),
+            title: Text(l10n.widgetMaxItems),
             trailing: DropdownButton<int>(
               value: settings.widgetMaxItems,
               underline: const SizedBox(),
@@ -246,14 +249,14 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           ListTile(
-            title: const Text('Theme'),
+            title: Text(l10n.widgetTheme),
             trailing: DropdownButton<String>(
               value: settings.widgetTheme,
               underline: const SizedBox(),
-              items: const [
-                DropdownMenuItem(value: 'match', child: Text('Match app')),
-                DropdownMenuItem(value: 'light', child: Text('Light')),
-                DropdownMenuItem(value: 'dark', child: Text('Dark')),
+              items: [
+                DropdownMenuItem(value: 'match', child: Text(l10n.matchApp)),
+                DropdownMenuItem(value: 'light', child: Text(l10n.themeLight)),
+                DropdownMenuItem(value: 'dark', child: Text(l10n.themeDark)),
               ],
               onChanged: (v) {
                 if (v != null) {
@@ -265,47 +268,85 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           ListTile(
-            title: const Text('Refresh widget'),
-            subtitle: const Text('Update the home screen widget data'),
+            title: Text(l10n.refreshWidget),
+            subtitle: Text(l10n.refreshWidgetSubtitle),
             leading: const Icon(Icons.widgets_outlined),
             onTap: () => _refreshWidget(context, ref),
           ),
           const Divider(),
-          _sectionHeader(context, 'Data'),
+          _sectionHeader(context, l10n.sectionData),
+          SwitchListTile(
+            title: Text(l10n.autoBackup),
+            subtitle: Text(l10n.autoBackupSubtitle),
+            value: settings.autoBackup,
+            onChanged: (v) async {
+              ref.read(settingsNotifierProvider.notifier).update(
+                settings.copyWith(autoBackup: v),
+              );
+              await BackupService.rescheduleBackup(
+                autoBackup: v,
+                interval: settings.backupInterval,
+              );
+            },
+          ),
+          if (settings.autoBackup)
+            ListTile(
+              title: Text(l10n.backupInterval),
+              trailing: DropdownButton<String>(
+                value: settings.backupInterval,
+                underline: const SizedBox(),
+                items: [
+                  DropdownMenuItem(value: 'daily', child: Text(l10n.backupDaily)),
+                  DropdownMenuItem(value: 'weekly', child: Text(l10n.backupWeekly)),
+                  DropdownMenuItem(value: 'monthly', child: Text(l10n.backupMonthly)),
+                ],
+                onChanged: (v) async {
+                  if (v != null) {
+                    ref.read(settingsNotifierProvider.notifier).update(
+                      settings.copyWith(backupInterval: v),
+                    );
+                    await BackupService.rescheduleBackup(
+                      autoBackup: true,
+                      interval: v,
+                    );
+                  }
+                },
+              ),
+            ),
           ListTile(
-            title: const Text('Manage labels'),
-            subtitle: const Text('Create, rename, delete labels'),
+            title: Text(l10n.manageLabels),
+            subtitle: Text(l10n.manageLabelsSubtitle),
             leading: const Icon(Icons.label_outline),
             onTap: () => context.push('/labels'),
           ),
           ListTile(
-            title: const Text('Backup & restore'),
-            subtitle: const Text('Create and restore backups'),
+            title: Text(l10n.backupAndRestore),
+            subtitle: Text(l10n.backupAndRestoreSubtitle),
             leading: const Icon(Icons.backup_outlined),
             onTap: () => context.push('/backup'),
           ),
           ListTile(
-            title: const Text('Import notes'),
-            subtitle: const Text('From Keep, Evernote, or Quillpad'),
+            title: Text(l10n.importNotes),
+            subtitle: Text(l10n.importNotesSubtitle),
             leading: const Icon(Icons.file_download_outlined),
             onTap: () => context.push('/import'),
           ),
           ListTile(
-            title: const Text('Repair database'),
-            subtitle: const Text('Check and repair database integrity'),
+            title: Text(l10n.repairDatabase),
+            subtitle: Text(l10n.repairDatabaseSubtitle),
             leading: const Icon(Icons.healing_outlined),
             onTap: () => _repairDatabase(context, ref),
           ),
           ListTile(
-            title: const Text('Clear all data'),
-            subtitle: const Text('Delete all notes and reset the app'),
+            title: Text(l10n.clearAllData),
+            subtitle: Text(l10n.clearAllDataSubtitle),
             leading: const Icon(Icons.delete_forever_outlined),
             onTap: () => _clearAllData(context, ref),
           ),
           const Divider(),
-          _sectionHeader(context, 'About'),
+          _sectionHeader(context, l10n.aboutSection),
           ListTile(
-            title: const Text('About PureNote'),
+            title: Text(l10n.aboutPureNote),
             leading: const Icon(Icons.info_outline),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/about'),
@@ -315,18 +356,25 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  String _autoLockLabel(int seconds) {
-    if (seconds <= 0) return 'Immediately';
-    if (seconds < 60) return '$seconds seconds';
-    final min = seconds ~/ 60;
-    return '$min minute${min > 1 ? 's' : ''}';
+  String _autoLockLabel(BuildContext context, int seconds) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (seconds) {
+      case 0: return l10n.autoLockImmediately;
+      case 15: return l10n.autoLock15Seconds;
+      case 30: return l10n.autoLock30Seconds;
+      case 60: return l10n.autoLock1Minute;
+      case 300: return l10n.autoLock5Minutes;
+      case 900: return l10n.autoLock15Minutes;
+      default: return l10n.autoLockImmediately;
+    }
   }
 
-  String _lockMethodLabel(String? method) {
+  String _lockMethodLabel(BuildContext context, String? method) {
+    final l10n = AppLocalizations.of(context)!;
     switch (method) {
-      case 'biometric': return 'Biometric only';
-      case 'both': return 'PIN or biometric';
-      default: return 'PIN only';
+      case 'biometric': return l10n.lockMethodBiometricOnly;
+      case 'both': return l10n.lockMethodBoth;
+      default: return l10n.lockMethodPinOnly;
     }
   }
 
@@ -343,7 +391,7 @@ class SettingsScreen extends ConsumerWidget {
       widgetLabel: settings.widgetLabel,
     );
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Widget updated')),
+      SnackBar(content: Text(AppLocalizations.of(context)!.widgetUpdated)),
     );
   }
 
@@ -364,19 +412,20 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _removePin(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove PIN?'),
-        content: const Text('This will disable app lock.'),
+        title: Text(l10n.removePin),
+        content: Text(l10n.removePinContent),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(l10n.cancel)),
           FilledButton(
             onPressed: () {
               AuthService().clearPin();
               Navigator.of(ctx).pop();
             },
-            child: const Text('Remove'),
+            child: Text(l10n.remove),
           ),
         ],
       ),
@@ -384,20 +433,21 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _repairDatabase(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Repair database'),
-        content: const Text('This will check and repair the database. May take a moment.'),
+        title: Text(l10n.repairDatabaseTitle),
+        content: Text(l10n.repairDatabaseContent),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(l10n.cancel)),
           FilledButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Running integrity check...')),
+                SnackBar(content: Text(l10n.runningIntegrityCheck)),
               );
-              final msg = await _runIntegrityCheck(ref);
+              final msg = await _runIntegrityCheck(context, ref);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -412,35 +462,37 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Future<String> _runIntegrityCheck(WidgetRef ref) async {
+  Future<String> _runIntegrityCheck(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final db = ref.read(databaseProvider);
       final result = await db.customSelect('PRAGMA integrity_check').get();
       final status = result.first.data.values.first.toString();
       if (status == 'ok') {
-        return 'Database integrity check passed';
+        return l10n.integrityCheckPassed;
       }
-      return 'Issues found: $status';
+      return l10n.integrityCheckIssues(status);
     } catch (e) {
-      return 'Check failed: $e';
+      return l10n.integrityCheckFailed(e);
     }
   }
 
   void _clearAllData(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clear all data?'),
-        content: const Text('This will permanently delete all notes, labels, attachments, and settings. This cannot be undone.'),
+        title: Text(l10n.clearAllDataTitle),
+        content: Text(l10n.clearAllDataContent),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(l10n.cancel)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () {
               Navigator.of(ctx).pop();
               _confirmClearAll(context, ref);
             },
-            child: const Text('Clear data'),
+            child: Text(l10n.clearDataButton),
           ),
         ],
       ),
@@ -448,13 +500,14 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _confirmClearAll(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Are you sure?'),
-        content: const Text('This action is irreversible. All your notes, attachments, and settings will be lost.'),
+        title: Text(l10n.areYouSure),
+        content: Text(l10n.areYouSureContent),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(l10n.cancel)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () async {
@@ -475,16 +528,16 @@ class SettingsScreen extends ConsumerWidget {
                   await dir.create();
                 }
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All data cleared')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.allDataCleared)));
                   ref.invalidate(databaseProvider);
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to clear data: $e')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.failedToClearData(e))));
                 }
               }
             },
-            child: const Text('Delete everything'),
+            child: Text(l10n.deleteEverything),
           ),
         ],
       ),

@@ -23,6 +23,7 @@ import 'package:purenote/core/utils/delta_utils.dart';
 import 'package:purenote/features/editor/providers/editor_state_provider.dart';
 import 'package:purenote/features/editor/widgets/attachment_chips.dart';
 import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final String? noteId;
@@ -121,7 +122,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
           } catch (_) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Failed to unlock note')),
+                SnackBar(content: Text(AppLocalizations.of(context)!.failedToUnlockNote)),
               );
             }
           }
@@ -215,7 +216,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
       if (mounted) {
         editorState.markDirty();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save note')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.failedToSaveNote)),
         );
       }
     }
@@ -243,7 +244,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
     if (id == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Save the note first')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.saveFirst)),
         );
       }
       return;
@@ -262,7 +263,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
       _debounceSave();
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to attach file')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.failedToAttachFile)),
       );
     }
   }
@@ -283,19 +284,19 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Discard changes?'),
-        content: const Text('You have unsaved changes. Do you want to discard them?'),
+        title: Text(AppLocalizations.of(context)!.discardChanges),
+        content: Text(AppLocalizations.of(context)!.discardChangesContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           FilledButton(
             onPressed: () {
               _saveTimer?.cancel();
               Navigator.of(ctx).pop(true);
             },
-            child: const Text('Discard'),
+            child: Text(AppLocalizations.of(context)!.discard),
           ),
         ],
       ),
@@ -313,7 +314,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Note color', style: Theme.of(ctx).textTheme.titleMedium),
+            Text(AppLocalizations.of(context)!.noteColor, style: Theme.of(ctx).textTheme.titleMedium),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -365,22 +366,22 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
     final pin = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Enter PIN'),
+        title: Text(AppLocalizations.of(context)!.enterPin),
         content: TextField(
           controller: controller,
           obscureText: true,
           maxLength: 6,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            hintText: 'Your PIN',
+          decoration: InputDecoration(
+            hintText: AppLocalizations.of(context)!.yourPin,
             counterText: '',
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(AppLocalizations.of(context)!.cancel)),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('OK'),
+            child: Text(AppLocalizations.of(context)!.ok),
           ),
         ],
       ),
@@ -428,19 +429,19 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
     final restore = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Recover draft?'),
-        content: const Text('An unsaved draft was found from a previous session. Would you like to restore it?'),
+        title: Text(AppLocalizations.of(context)!.recoverDraft),
+        content: Text(AppLocalizations.of(context)!.recoverDraftContent),
         actions: [
           TextButton(
             onPressed: () async {
               await draftFile.delete();
               if (ctx.mounted) Navigator.pop(ctx, false);
             },
-            child: const Text('Discard'),
+            child: Text(AppLocalizations.of(context)!.discard),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Restore'),
+            child: Text(AppLocalizations.of(context)!.restore),
           ),
         ],
       ),
@@ -508,11 +509,11 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
                 title: Text(
                   'Reminder set for ${_formatReminder(_reminderAt!)}',
                 ),
-                subtitle: const Text('Tap below to change or remove'),
+                subtitle: Text(AppLocalizations.of(context)!.tapToChangeOrRemove),
               ),
             ListTile(
               leading: const Icon(Icons.edit_calendar),
-              title: const Text('Set reminder'),
+              title: Text(AppLocalizations.of(context)!.setReminder),
               onTap: () async {
                 Navigator.of(ctx).pop();
                 final date = await showDatePicker(
@@ -537,7 +538,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
             if (_reminderAt != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('Remove reminder', style: TextStyle(color: Colors.red)),
+                title: Text(AppLocalizations.of(context)!.removeReminder, style: const TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   setState(() => _reminderAt = null);
@@ -585,31 +586,31 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
             IconButton(
               icon: const Icon(Icons.label_outline),
               onPressed: _showLabelPicker,
-              tooltip: 'Labels',
+              tooltip: AppLocalizations.of(context)!.labels,
             ),
             IconButton(
               icon: const Icon(Icons.palette_outlined),
               onPressed: _showColorPicker,
-              tooltip: 'Color',
+              tooltip: AppLocalizations.of(context)!.color,
             ),
             IconButton(
               icon: Icon(
                 _isLocked ? Icons.lock : Icons.lock_open_outlined,
               ),
               onPressed: _toggleLock,
-              tooltip: _isLocked ? 'Locked' : 'Not locked',
+              tooltip: _isLocked ? AppLocalizations.of(context)!.locked : AppLocalizations.of(context)!.unlock,
             ),
             IconButton(
               icon: Icon(
                 _reminderAt != null ? Icons.alarm : Icons.alarm_outlined,
               ),
               onPressed: _showReminderPicker,
-              tooltip: 'Reminder',
+              tooltip: AppLocalizations.of(context)!.reminder,
             ),
             IconButton(
               icon: const Icon(Icons.share),
               onPressed: _shareNote,
-              tooltip: 'Share',
+              tooltip: AppLocalizations.of(context)!.share,
             ),
             IconButton(
               icon: const Icon(Icons.mic_outlined),
@@ -617,18 +618,18 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
                 final id = _currentNoteId;
                 if (id == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Save the note first')),
+                    SnackBar(content: Text(AppLocalizations.of(context)!.saveFirst)),
                   );
                   return;
                 }
                 context.push('/audio/record/$id');
               },
-              tooltip: 'Record audio',
+              tooltip: AppLocalizations.of(context)!.recordAudio,
             ),
             IconButton(
               icon: const Icon(Icons.check),
               onPressed: _save,
-              tooltip: 'Save',
+              tooltip: AppLocalizations.of(context)!.save,
             ),
           ],
         ),
@@ -639,8 +640,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
               child: TextField(
                 controller: _titleController,
                 autofocus: _isNew,
-                decoration: const InputDecoration(
-                  hintText: 'Title',
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context)!.titleHint,
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -680,9 +681,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: QuillEditor.basic(
                   controller: _quillController,
-                  config: const QuillEditorConfig(
-                    placeholder: 'Start writing...',
-                    padding: EdgeInsets.only(top: 8),
+                  config: QuillEditorConfig(
+                    placeholder: AppLocalizations.of(context)!.startWriting,
+                    padding: const EdgeInsets.only(top: 8),
                   ),
                 ),
               ),
@@ -718,15 +719,15 @@ class _SaveStatusBar extends StatelessWidget {
     switch (saveStatus) {
       case SaveStatus.idle:
       case SaveStatus.saved:
-        text = 'Saved';
+        text = AppLocalizations.of(context)!.saved;
         icon = Icons.check_circle_outline;
         color = Colors.green;
       case SaveStatus.saving:
-        text = 'Saving...';
+        text = AppLocalizations.of(context)!.saving;
         icon = Icons.sync;
         color = theme.colorScheme.primary;
       case SaveStatus.unsaved:
-        text = 'Unsaved changes';
+        text = AppLocalizations.of(context)!.unsavedChanges;
         icon = Icons.edit_outlined;
         color = Colors.orange;
     }

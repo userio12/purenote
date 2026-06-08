@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:purenote/core/services/auth_service.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class PinSetupScreen extends StatefulWidget {
   final VoidCallback onComplete;
@@ -62,7 +63,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
         widget.onComplete();
       } else {
         setState(() {
-          _error = 'PINs do not match';
+          _error = 'pinsDoNotMatch';
           _step = 0;
           _firstPin = null;
           for (final c in _pinController) { c.clear(); }
@@ -75,12 +76,12 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_step == 0 ? 'Set PIN' : 'Confirm PIN')),
+      appBar: AppBar(title: Text(_step == 0 ? AppLocalizations.of(context)!.setPinTitle : AppLocalizations.of(context)!.confirmPinTitle)),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            _step == 0 ? 'Enter a 6-digit PIN' : 'Re-enter your PIN',
+            _step == 0 ? AppLocalizations.of(context)!.enterSixDigitPin : AppLocalizations.of(context)!.reenterPin,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 32),
@@ -112,7 +113,10 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 16),
-            Text(_error!, style: const TextStyle(color: Colors.red)),
+            Text(
+              _error == 'pinsDoNotMatch' ? AppLocalizations.of(context)!.pinsDoNotMatch : _error!,
+              style: const TextStyle(color: Colors.red),
+            ),
           ],
           const SizedBox(height: 32),
           _buildNumpad(),
@@ -146,7 +150,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
         const SizedBox(height: 16),
         FilledButton(
           onPressed: _pinController.every((c) => c.text.isNotEmpty) ? _onSubmit : null,
-          child: Text(_step == 0 ? 'Continue' : 'Confirm'),
+          child: Text(_step == 0 ? AppLocalizations.of(context)!.continueBtn : AppLocalizations.of(context)!.confirm),
         ),
       ],
     );

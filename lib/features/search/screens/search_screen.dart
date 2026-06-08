@@ -6,6 +6,7 @@ import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/database/note_type.dart';
 import 'package:purenote/features/search/providers/search_provider.dart';
 import 'package:purenote/features/search/widgets/search_result_tile.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -68,8 +69,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           controller: _controller,
           autofocus: true,
           textInputAction: TextInputAction.search,
-          decoration: const InputDecoration(
-            hintText: 'Search notes...',
+          decoration: InputDecoration(
+            hintText: AppLocalizations.of(context)!.searchNotesHint,
             border: InputBorder.none,
           ),
           onChanged: _onSearchChanged,
@@ -80,7 +81,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             IconButton(
               icon: const Icon(Icons.clear),
               onPressed: _clearSearch,
-              tooltip: 'Clear',
+              tooltip: AppLocalizations.of(context)!.clear,
             ),
         ],
       ),
@@ -101,7 +102,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 Icon(Icons.search, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
                 const SizedBox(height: 16),
                 Text(
-                  'Search your notes',
+                  AppLocalizations.of(context)!.searchYourNotes,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
@@ -118,10 +119,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Recent searches', style: theme.textTheme.labelLarge),
+                  Text(AppLocalizations.of(context)!.recentSearches, style: theme.textTheme.labelLarge),
                   TextButton(
                     onPressed: () => ref.read(recentSearchesProvider.notifier).clearAll(),
-                    child: const Text('Clear all'),
+                    child: Text(AppLocalizations.of(context)!.clearAll),
                   ),
                 ],
               ),
@@ -133,7 +134,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 trailing: IconButton(
                   icon: const Icon(Icons.close, size: 18),
                   onPressed: () => ref.read(recentSearchesProvider.notifier).remove(q),
-                  tooltip: 'Remove',
+                  tooltip: AppLocalizations.of(context)!.remove,
                 ),
                 onTap: () {
                   _controller.text = q;
@@ -151,7 +152,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return results.when(
       loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
       error: (e, _) => Center(
-        child: Text('Something went wrong', style: theme.textTheme.bodyMedium),
+        child: Text(AppLocalizations.of(context)!.somethingWentWrong, style: theme.textTheme.bodyMedium),
       ),
       data: (notes) {
         if (notes.isEmpty) {
@@ -162,7 +163,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 Icon(Icons.search_off, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
                 const SizedBox(height: 16),
                 Text(
-                  'No results for "$_query"',
+                  AppLocalizations.of(context)!.noResults(_query),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),

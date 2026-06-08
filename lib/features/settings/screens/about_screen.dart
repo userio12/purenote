@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -8,7 +9,7 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('About')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.about)),
       body: FutureBuilder<PackageInfo>(
         future: PackageInfo.fromPlatform(),
         builder: (context, snapshot) {
@@ -17,31 +18,31 @@ class AboutScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _sectionHeader(context, 'App Info'),
+              _sectionHeader(context, AppLocalizations.of(context)!.appInfo),
               ListTile(
-                title: const Text('Version'),
+                title: Text(AppLocalizations.of(context)!.version),
                 subtitle: Text('$version+$build'),
               ),
               const Divider(),
-              _sectionHeader(context, 'Links'),
+              _sectionHeader(context, AppLocalizations.of(context)!.links),
               ListTile(
-                title: const Text('Open source licenses'),
+                title: Text(AppLocalizations.of(context)!.openSourceLicenses),
                 leading: const Icon(Icons.description_outlined),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => showLicensePage(
                   context: context,
-                  applicationName: 'PureNote',
+                  applicationName: AppLocalizations.of(context)!.appTitle,
                   applicationVersion: version,
                 ),
               ),
               ListTile(
-                title: const Text('Privacy policy'),
+                title: Text(AppLocalizations.of(context)!.privacyPolicy),
                 leading: const Icon(Icons.privacy_tip_outlined),
                 trailing: const Icon(Icons.open_in_new),
                 onTap: () => _launchUrl('https://purenote.app/privacy'),
               ),
               ListTile(
-                title: const Text('Send feedback'),
+                title: Text(AppLocalizations.of(context)!.sendFeedback),
                 leading: const Icon(Icons.feedback_outlined),
                 trailing: const Icon(Icons.open_in_new),
                 onTap: () => _launchUrl('mailto:support@purenote.app'),

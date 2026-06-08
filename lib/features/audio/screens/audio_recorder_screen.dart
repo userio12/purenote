@@ -12,6 +12,7 @@ import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/services/attachment_service.dart';
 import 'package:purenote/features/audio/widgets/audio_player_widget.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class AudioRecorderScreen extends ConsumerStatefulWidget {
   final String noteId;
@@ -63,7 +64,7 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> with 
     if (!hasPermission) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Microphone permission required')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.microphonePermissionRequired)),
         );
       }
       return;
@@ -157,7 +158,7 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> with 
       context.pop(true);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save recording')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.failedToSaveRecording)),
       );
     }
   }
@@ -166,11 +167,11 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> with 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Discard recording?'),
-        content: const Text('This recording will be permanently deleted.'),
+        title: Text(AppLocalizations.of(context)!.deleteRecording),
+        content: Text(AppLocalizations.of(context)!.deleteRecordingContent),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Discard')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context)!.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(AppLocalizations.of(context)!.discard)),
         ],
       ),
     );
@@ -194,13 +195,13 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> with 
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Record Audio'),
+        title: Text(AppLocalizations.of(context)!.recordAudioTitle),
         actions: [
           if (_recordedPath != null && !_isRecording)
             IconButton(
               icon: const Icon(Icons.check),
               onPressed: _saveRecording,
-              tooltip: 'Save',
+              tooltip: AppLocalizations.of(context)!.save,
             ),
         ],
       ),
@@ -277,7 +278,7 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> with 
                 onPressed: _isRecording ? _stopRecording : _discard,
                 icon: const Icon(Icons.stop, color: Colors.red),
                 label: Text(
-                  _isRecording ? 'Stop' : 'Discard',
+                  _isRecording ? AppLocalizations.of(context)!.stop : AppLocalizations.of(context)!.discard,
                   style: const TextStyle(color: Colors.red),
                 ),
               ),

@@ -9,6 +9,7 @@ import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/theme/app_theme.dart';
 import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
+import 'package:purenote/l10n/app_localizations.dart';
 
 class TaskListEditorScreen extends ConsumerStatefulWidget {
   final String? noteId;
@@ -241,7 +242,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save task list')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.failedToSaveTaskList)),
         );
       }
     }
@@ -265,7 +266,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Color', style: Theme.of(ctx).textTheme.titleMedium),
+              Text(AppLocalizations.of(context)!.color, style: Theme.of(ctx).textTheme.titleMedium),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -324,7 +325,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
   Future<void> _showLabelPicker() async {
     if (widget.noteId == null && _isNew) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Save the task list first to add labels')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.saveFirst)),
       );
       return;
     }
@@ -361,22 +362,22 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
       child: Scaffold(
         backgroundColor: bgColor,
         appBar: AppBar(
-          title: Text(_isNew ? 'New Task List' : 'Edit Task List'),
+          title: Text(_isNew ? AppLocalizations.of(context)!.newTaskList : AppLocalizations.of(context)!.editTaskList),
           actions: [
             IconButton(
               icon: Icon(_isPinned ? Icons.push_pin : Icons.push_pin_outlined),
               onPressed: () => setState(() => _isPinned = !_isPinned),
-              tooltip: _isPinned ? 'Unpin' : 'Pin',
+              tooltip: _isPinned ? AppLocalizations.of(context)!.unpin : AppLocalizations.of(context)!.pin,
             ),
             IconButton(
               icon: const Icon(Icons.label_outline),
               onPressed: _showLabelPicker,
-              tooltip: 'Labels',
+              tooltip: AppLocalizations.of(context)!.labels,
             ),
             IconButton(
               icon: const Icon(Icons.palette_outlined),
               onPressed: _showColorPicker,
-              tooltip: 'Color',
+              tooltip: AppLocalizations.of(context)!.color,
             ),
             IconButton(
               icon: const Icon(Icons.check),
@@ -384,7 +385,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
                 await _save();
                 if (context.mounted) context.pop();
               },
-              tooltip: 'Save',
+              tooltip: AppLocalizations.of(context)!.save,
             ),
           ],
         ),
@@ -395,8 +396,8 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
               child: TextField(
                 controller: _titleController,
                 onChanged: (_) => _debounceSave(),
-                decoration: const InputDecoration(
-                  hintText: 'Task list title',
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context)!.taskListTitle,
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -415,7 +416,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
                           Icon(Icons.playlist_add, size: 48, color: Colors.grey.shade400),
                           const SizedBox(height: 12),
                           Text(
-                            'No items yet',
+                            AppLocalizations.of(context)!.noItemsYet,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: Colors.grey.shade500,
                             ),
@@ -424,7 +425,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
                           FilledButton.tonalIcon(
                             onPressed: _addItem,
                             icon: const Icon(Icons.add),
-                            label: const Text('Add item'),
+                            label: Text(AppLocalizations.of(context)!.addItem),
                           ),
                         ],
                       ),
@@ -494,7 +495,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: _addItem,
-          tooltip: 'Add item',
+          tooltip: AppLocalizations.of(context)!.addItem,
           child: const Icon(Icons.add),
         ),
       ),
@@ -558,7 +559,7 @@ class _TaskItemTile extends StatelessWidget {
               focusNode: focusNode,
               onChanged: (_) => onChanged(),
               decoration: InputDecoration(
-                hintText: 'Task item',
+                hintText: AppLocalizations.of(context)!.newTaskItem,
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -574,28 +575,28 @@ class _TaskItemTile extends StatelessWidget {
             IconButton(
               icon: Icon(isExpanded ? Icons.expand_less : Icons.expand_more, size: 18),
               onPressed: onToggleExpand,
-              tooltip: isExpanded ? 'Collapse subtasks' : 'Expand subtasks',
+              tooltip: isExpanded ? AppLocalizations.of(context)!.collapseSubtasks : AppLocalizations.of(context)!.expandSubtasks,
               constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               padding: EdgeInsets.zero,
             ),
           IconButton(
             icon: const Icon(Icons.subdirectory_arrow_left, size: 18),
             onPressed: onToggleSubtask,
-            tooltip: isChild ? 'Unindent' : 'Indent',
+            tooltip: isChild ? AppLocalizations.of(context)!.unindent : AppLocalizations.of(context)!.indent,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             padding: EdgeInsets.zero,
           ),
           IconButton(
             icon: const Icon(Icons.add, size: 18),
             onPressed: onAddSubtask,
-            tooltip: 'Add subtask',
+            tooltip: AppLocalizations.of(context)!.addSubtask,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             padding: EdgeInsets.zero,
           ),
           IconButton(
             icon: const Icon(Icons.close, size: 18),
             onPressed: onDelete,
-            tooltip: 'Remove',
+            tooltip: AppLocalizations.of(context)!.remove,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             padding: EdgeInsets.zero,
           ),
@@ -631,7 +632,7 @@ class _TaskListFooter extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            '$checkedCount / $totalCount done',
+            AppLocalizations.of(context)!.taskProgress(checkedCount, totalCount),
             style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
@@ -641,7 +642,7 @@ class _TaskListFooter extends StatelessWidget {
             TextButton.icon(
               onPressed: onRemoveChecked,
               icon: const Icon(Icons.cleaning_services_outlined, size: 16),
-              label: const Text('Remove checked'),
+              label: Text(AppLocalizations.of(context)!.removeChecked),
               style: TextButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 foregroundColor: theme.colorScheme.error,
@@ -649,7 +650,7 @@ class _TaskListFooter extends StatelessWidget {
             ),
           const SizedBox(width: 8),
           Text(
-            'Auto-sort',
+            AppLocalizations.of(context)!.autoSort,
             style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
