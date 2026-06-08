@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purenote/core/database/database.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/features/notes/widgets/note_card.dart';
 import 'package:purenote/l10n/app_localizations.dart';
 
@@ -26,7 +27,8 @@ Widget _wrap(Widget w) => MaterialApp(
     GlobalCupertinoLocalizations.delegate,
   ],
   supportedLocales: const [Locale('en')],
-  home: Scaffold(body: w),
+  theme: ThemeData(extensions: [AppColors.dark()]),
+  home: w,
 );
 
 void main() {

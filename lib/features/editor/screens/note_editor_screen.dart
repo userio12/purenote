@@ -18,6 +18,7 @@ import 'package:purenote/core/services/attachment_service.dart';
 import 'package:purenote/core/services/auth_service.dart';
 import 'package:purenote/core/services/encryption_service.dart';
 import 'package:purenote/core/services/notification_service.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/core/theme/app_theme.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
 import 'package:purenote/features/editor/providers/editor_state_provider.dart';
@@ -497,6 +498,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
   }
 
   void _showReminderPicker() {
+    final colors = Theme.of(context).extension<AppColors>()!;
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -537,8 +539,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> with Widget
             ),
             if (_reminderAt != null)
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: Text(AppLocalizations.of(context)!.removeReminder, style: const TextStyle(color: Colors.red)),
+                leading: Icon(Icons.delete_outline, color: colors.accentDanger),
+                title: Text(AppLocalizations.of(context)!.removeReminder, style: TextStyle(color: colors.accentDanger)),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   setState(() => _reminderAt = null);
@@ -712,6 +714,7 @@ class _SaveStatusBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = Theme.of(context).extension<AppColors>()!;
     String text;
     IconData icon;
     Color color;
@@ -721,7 +724,7 @@ class _SaveStatusBar extends StatelessWidget {
       case SaveStatus.saved:
         text = AppLocalizations.of(context)!.saved;
         icon = Icons.check_circle_outline;
-        color = Colors.green;
+        color = colors.accentSuccess;
       case SaveStatus.saving:
         text = AppLocalizations.of(context)!.saving;
         icon = Icons.sync;
@@ -729,7 +732,7 @@ class _SaveStatusBar extends StatelessWidget {
       case SaveStatus.unsaved:
         text = AppLocalizations.of(context)!.unsavedChanges;
         icon = Icons.edit_outlined;
-        color = Colors.orange;
+        color = colors.accentWarm;
     }
 
     return Container(

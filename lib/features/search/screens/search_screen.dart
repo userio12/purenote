@@ -1,9 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/database/note_type.dart';
+import 'package:purenote/core/theme/app_colors.dart';
+import 'package:purenote/core/theme/app_spacing.dart';
+import 'package:purenote/core/theme/app_shapes.dart';
+import 'package:purenote/core/widgets/empty_state_widget.dart';
 import 'package:purenote/features/search/providers/search_provider.dart';
 import 'package:purenote/features/search/widgets/search_result_tile.dart';
 import 'package:purenote/l10n/app_localizations.dart';
@@ -59,67 +64,83 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colors = Theme.of(context).extension<AppColors>()!;
     final results = ref.watch(searchResultsProvider(_query));
     final recentAsync = ref.watch(recentSearchesProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: TextField(
-          controller: _controller,
-          autofocus: true,
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: AppLocalizations.of(context)!.searchNotesHint,
-            border: InputBorder.none,
+        title: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: colors.surfaceElevated,
+            borderRadius: AppShapes.lg,
           ),
-          onChanged: _onSearchChanged,
-          onSubmitted: _submit,
-        ),
-        actions: [
-          if (_query.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.clear),
-              onPressed: _clearSearch,
-              tooltip: AppLocalizations.of(context)!.clear,
+          child: TextField(
+            controller: _controller,
+            autofocus: true,
+            textInputAction: TextInputAction.search,
+            style: TextStyle(color: colors.textPrimary),
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.searchNotesHint,
+              hintStyle: TextStyle(color: colors.textTertiary),
+              prefixIcon: Icon(Icons.search, color: colors.textSecondary),
+              suffixIcon: _query.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear, color: colors.textSecondary),
+                      onPressed: _clearSearch,
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
             ),
-        ],
+            onChanged: _onSearchChanged,
+            onSubmitted: _submit,
+          ),
+        ),
       ),
-      body: _query.isEmpty ? _buildRecent(theme, recentAsync) : _buildResults(theme, results),
+      body: _query.isEmpty
+          ? _buildRecent(colors, recentAsync)
+          : _buildResults(colors, results),
     );
   }
 
-  Widget _buildRecent(ThemeData theme, AsyncValue<List<String>> recentAsync) {
+  Widget _buildRecent(AppColors colors, AsyncValue<List<String>> recentAsync) {
     return recentAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
       error: (_, _) => const SizedBox.shrink(),
       data: (recent) {
         if (recent.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.search, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
-                const SizedBox(height: 16),
-                Text(
-                  AppLocalizations.of(context)!.searchYourNotes,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                ),
-              ],
-            ),
+          return EmptyStateWidget(
+            lottieAsset: 'assets/lottie/empty_search.json',
+            title: AppLocalizations.of(context)!.searchYourNotes,
           );
         }
 
-        return ListView(
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.sm,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(AppLocalizations.of(context)!.recentSearches, style: theme.textTheme.labelLarge),
+                  Text(
+                    AppLocalizations.of(context)!.recentSearches,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textSecondary,
+                    ),
+                  ),
                   TextButton(
                     onPressed: () => ref.read(recentSearchesProvider.notifier).clearAll(),
                     child: Text(AppLocalizations.of(context)!.clearAll),
@@ -127,19 +148,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ],
               ),
             ),
-            ...recent.map(
-              (q) => ListTile(
-                leading: const Icon(Icons.history, size: 20),
-                title: Text(q, overflow: TextOverflow.ellipsis),
-                trailing: IconButton(
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: () => ref.read(recentSearchesProvider.notifier).remove(q),
-                  tooltip: AppLocalizations.of(context)!.remove,
-                ),
-                onTap: () {
-                  _controller.text = q;
-                  _submit(q);
-                },
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: recent.map((q) {
+                  return ActionChip(
+                    label: Text(
+                      q,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colors.accentPrimary,
+                      ),
+                    ),
+                    backgroundColor: colors.accentPrimaryLight.withValues(alpha: 0.2),
+                    side: BorderSide.none,
+                    onPressed: () {
+                      _controller.text = q;
+                      _submit(q);
+                    },
+                    avatar: Icon(
+                      Icons.history,
+                      size: 16,
+                      color: colors.accentPrimary,
+                    ),
+                  );
+                }).toList(),
               ),
             ),
           ],
@@ -148,35 +183,31 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _buildResults(ThemeData theme, AsyncValue<List<Note>> results) {
+  Widget _buildResults(AppColors colors, AsyncValue<List<Note>> results) {
     return results.when(
       loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
       error: (e, _) => Center(
-        child: Text(AppLocalizations.of(context)!.somethingWentWrong, style: theme.textTheme.bodyMedium),
+        child: Text(
+          AppLocalizations.of(context)!.somethingWentWrong,
+          style: TextStyle(color: colors.textSecondary),
+        ),
       ),
       data: (notes) {
         if (notes.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.search_off, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
-                const SizedBox(height: 16),
-                Text(
-                  AppLocalizations.of(context)!.noResults(_query),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
+          return EmptyStateWidget(
+            icon: Icons.search_off,
+            title: AppLocalizations.of(context)!.noResults(_query),
           );
         }
 
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           itemCount: notes.length,
-          separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
+          separatorBuilder: (_, _) => const Divider(
+            height: 1,
+            indent: AppSpacing.lg,
+            endIndent: 0,
+          ),
           itemBuilder: (context, index) {
             final note = notes[index];
             return SearchResultTile(
@@ -184,7 +215,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               note: note,
               query: _query,
               onTap: () => _openNote(note),
-            );
+            ).animate(delay: (index * 50).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, duration: 300.ms);
           },
         );
       },

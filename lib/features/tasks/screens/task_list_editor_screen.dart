@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
@@ -8,6 +9,7 @@ import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/theme/app_theme.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
 import 'package:purenote/l10n/app_localizations.dart';
 
@@ -110,6 +112,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
   }
 
   void _toggleChecked(String id) {
+    HapticFeedback.lightImpact();
     setState(() {
       _itemChecked[id] = !(_itemChecked[id] ?? false);
     });
@@ -257,6 +260,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
   }
 
   void _showColorPicker() {
+    final colors = Theme.of(context).extension<AppColors>()!;
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -282,14 +286,14 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
                       width: 40, height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey.shade400),
+                        border: Border.all(color: colors.textTertiary),
                         color: _selectedColor == null
                             ? Theme.of(ctx).colorScheme.primaryContainer
                             : null,
                       ),
                       child: _selectedColor == null
                           ? Icon(Icons.check, size: 18, color: Theme.of(ctx).colorScheme.onPrimaryContainer)
-                          : Icon(Icons.close, size: 18, color: Colors.grey.shade500),
+                          : Icon(Icons.close, size: 18, color: colors.textSecondary),
                     ),
                   ),
                   for (final c in AppTheme.noteColors)
@@ -349,6 +353,7 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.extension<AppColors>()!;
     final bgColor = _selectedColor != null ? Color(_selectedColor!).withValues(alpha: 0.08) : null;
     final checkedCount = _itemChecked.values.where((v) => v).length;
 
@@ -413,12 +418,12 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.playlist_add, size: 48, color: Colors.grey.shade400),
+                          Icon(Icons.playlist_add, size: 48, color: colors.textTertiary),
                           const SizedBox(height: 12),
                           Text(
                             AppLocalizations.of(context)!.noItemsYet,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey.shade500,
+                              color: colors.textSecondary,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -494,7 +499,10 @@ class _TaskListEditorScreenState extends ConsumerState<TaskListEditorScreen> {
           ],
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: _addItem,
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            _addItem();
+          },
           tooltip: AppLocalizations.of(context)!.addItem,
           child: const Icon(Icons.add),
         ),
@@ -538,15 +546,16 @@ class _TaskItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.extension<AppColors>()!;
     return Padding(
       padding: EdgeInsets.only(left: isChild ? 40 : 8),
       child: Row(
         children: [
           ReorderableDragStartListener(
             index: index,
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.drag_handle, color: Colors.grey),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Icon(Icons.drag_handle, color: colors.textTertiary),
             ),
           ),
           Checkbox(

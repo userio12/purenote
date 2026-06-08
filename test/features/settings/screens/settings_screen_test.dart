@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/providers/database_provider.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/features/settings/screens/settings_screen.dart';
 import 'package:purenote/l10n/app_localizations.dart';
 
@@ -16,6 +17,7 @@ Widget _wrap(Widget w) => MaterialApp(
     GlobalCupertinoLocalizations.delegate,
   ],
   supportedLocales: const [Locale('en')],
+  theme: ThemeData(extensions: [AppColors.dark()]),
   home: Scaffold(body: w),
 );
 

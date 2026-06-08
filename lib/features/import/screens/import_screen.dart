@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/services/attachment_service.dart';
 import 'package:purenote/features/import/services/import_service.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/l10n/app_localizations.dart';
 
 class ImportScreen extends ConsumerStatefulWidget {
@@ -23,6 +24,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = Theme.of(context).extension<AppColors>()!;
 
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.importNotesTitle)),
@@ -88,7 +90,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   children: [
                     Icon(
                       _result!.failed > 0 ? Icons.warning_amber : Icons.check_circle,
-                      color: _result!.failed > 0 ? Colors.orange : Colors.green,
+                      color: _result!.failed > 0 ? colors.accentWarm : colors.accentSuccess,
                       size: 48,
                     ),
                     const SizedBox(height: 12),

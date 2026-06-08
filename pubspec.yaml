@@ -76,6 +76,12 @@ dependencies:
   xml: ^6.5.0
   archive: ^4.0.9
 
+  # UI premium
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.2
+  lottie: ^3.3.1
+  shimmer: ^3.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -95,3 +101,6 @@ dev_dependencies:
 flutter:
   generate: true
   uses-material-design: true
+
+  assets:
+    - assets/lottie/

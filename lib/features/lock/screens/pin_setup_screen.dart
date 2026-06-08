@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:purenote/core/services/auth_service.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/l10n/app_localizations.dart';
 
 class PinSetupScreen extends StatefulWidget {
@@ -75,6 +76,8 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColors>()!;
+
     return Scaffold(
       appBar: AppBar(title: Text(_step == 0 ? AppLocalizations.of(context)!.setPinTitle : AppLocalizations.of(context)!.confirmPinTitle)),
       body: Column(
@@ -115,7 +118,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
             const SizedBox(height: 16),
             Text(
               _error == 'pinsDoNotMatch' ? AppLocalizations.of(context)!.pinsDoNotMatch : _error!,
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: colors.accentDanger),
             ),
           ],
           const SizedBox(height: 32),

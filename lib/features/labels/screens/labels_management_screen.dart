@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/features/labels/providers/labels_provider.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/l10n/app_localizations.dart';
 
 class LabelsManagementScreen extends ConsumerWidget {
@@ -16,6 +19,7 @@ class LabelsManagementScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final labelsAsync = ref.watch(labelsProvider);
     final theme = Theme.of(context);
+    final colors = Theme.of(context).extension<AppColors>()!;
 
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.labelsTitle)),
@@ -59,9 +63,9 @@ class LabelsManagementScreen extends ConsumerWidget {
                   children: [
                     ReorderableDragStartListener(
                       index: index,
-                      child: const Padding(
-                        padding: EdgeInsets.only(right: 8),
-                        child: Icon(Icons.drag_handle, color: Colors.grey),
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Icon(Icons.drag_handle, color: colors.textTertiary),
                       ),
                     ),
                     CircleAvatar(
@@ -78,13 +82,16 @@ class LabelsManagementScreen extends ConsumerWidget {
                   tooltip: AppLocalizations.of(context)!.delete,
                 ),
                 onTap: () => _renameLabel(context, ref, label),
-              );
+              ).animate(delay: (index * 50).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, duration: 300.ms);
             },
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _createLabel(context, ref),
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          _createLabel(context, ref);
+        },
         child: const Icon(Icons.add),
       ),
     );

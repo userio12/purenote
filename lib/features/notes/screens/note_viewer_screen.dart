@@ -18,6 +18,7 @@ import 'package:purenote/features/notes/providers/notes_provider.dart';
 import 'package:purenote/features/labels/widgets/label_chip.dart';
 import 'package:purenote/features/audio/widgets/audio_player_widget.dart';
 import 'package:purenote/l10n/app_localizations.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 
 class NoteViewerScreen extends ConsumerStatefulWidget {
   final String noteId;
@@ -133,14 +134,15 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
   }
 
   Widget _buildNoteBody(Note note) {
+    final colors = Theme.of(context).extension<AppColors>()!;
     if (note.isLocked) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lock, size: 48, color: Colors.grey.shade400),
+            Icon(Icons.lock, size: 48, color: colors.textTertiary),
             const SizedBox(height: 16),
-            Text(AppLocalizations.of(context)!.lockedNote, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600)),
+            Text(AppLocalizations.of(context)!.lockedNote, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: colors.textSecondary)),
             const SizedBox(height: 8),
             FilledButton(
               onPressed: () => _toggleLock(note, ref.read(noteDaoProvider)),
@@ -156,36 +158,44 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
     final dateFormat = DateFormat.yMMMd().add_jm();
     final bgColor = note.color != null ? Color(note.color!).withValues(alpha: 0.08) : null;
 
-    return Container(
-      color: bgColor,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              note.title.isNotEmpty ? note.title : AppLocalizations.of(context)!.untitled,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
+    return Hero(
+      tag: 'note-color-${note.id}',
+      child: Container(
+        color: bgColor,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Hero(
+                tag: 'note-title-${note.id}',
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Text(
+                    note.title.isNotEmpty ? note.title : AppLocalizations.of(context)!.untitled,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
+                Icon(Icons.access_time, size: 14, color: colors.textSecondary),
                 const SizedBox(width: 4),
                 Text(
                   AppLocalizations.of(context)!.createdLabel(dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.createdAt))),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.update, size: 14, color: Colors.grey.shade500),
+                Icon(Icons.update, size: 14, color: colors.textSecondary),
                 const SizedBox(width: 4),
                 Text(
                   AppLocalizations.of(context)!.updatedLabel(dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.updatedAt))),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
@@ -193,11 +203,11 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.notifications, size: 14, color: Colors.grey.shade500),
+                  Icon(Icons.notifications, size: 14, color: colors.textSecondary),
                   const SizedBox(width: 4),
                   Text(
                     AppLocalizations.of(context)!.reminderLabel(dateFormat.format(DateTime.fromMillisecondsSinceEpoch(note.reminderAt!))),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
                   ),
                 ],
               ),
@@ -206,9 +216,9 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.push_pin, size: 14, color: Colors.grey.shade500),
+                  Icon(Icons.push_pin, size: 14, color: colors.textSecondary),
                   const SizedBox(width: 4),
-                  Text(AppLocalizations.of(context)!.pinned, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500)),
+                  Text(AppLocalizations.of(context)!.pinned, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.textSecondary)),
                 ],
               ),
             ],
@@ -260,7 +270,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 4),
                               child: Row(
                                 children: [
-                                  Icon(Icons.audiotrack, size: 20, color: Colors.grey.shade600),
+                                  Icon(Icons.audiotrack, size: 20, color: colors.textSecondary),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: NoteAudioPlayer(
@@ -288,6 +298,7 @@ class _NoteViewerScreenState extends ConsumerState<NoteViewerScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

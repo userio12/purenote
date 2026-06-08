@@ -1,11 +1,15 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purenote/core/database/database.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
+import 'package:purenote/core/widgets/empty_state_widget.dart';
 import 'package:purenote/features/tasks/providers/task_items_provider.dart';
 import 'package:purenote/features/tasks/providers/task_lists_provider.dart';
 import 'package:purenote/l10n/app_localizations.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 
 class TaskListsScreen extends ConsumerWidget {
   const TaskListsScreen({super.key});
@@ -25,7 +29,10 @@ class TaskListsScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
             itemCount: notes.length,
             itemBuilder: (context, index) {
-              return _TaskListCard(note: notes[index]);
+              return _TaskListCard(note: notes[index])
+                  .animate(delay: (index * 50).ms)
+                  .fadeIn(duration: 300.ms)
+                  .slideY(begin: 0.05, duration: 300.ms);
             },
           );
         },
@@ -33,7 +40,10 @@ class TaskListsScreen extends ConsumerWidget {
         error: (e, _) => _ErrorState(onRetry: () => ref.invalidate(taskListNotesProvider)),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/task-list/new'),
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          context.push('/task-list/new');
+        },
         tooltip: AppLocalizations.of(context)!.newTaskList,
         child: const Icon(Icons.add),
       ),
@@ -49,6 +59,7 @@ class _TaskListCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(taskItemsByNoteProvider(note.id));
     final theme = Theme.of(context);
+    final colors = theme.extension<AppColors>()!;
 
     return tasksAsync.when(
       data: (items) {
@@ -92,7 +103,7 @@ class _TaskListCard extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: Colors.grey),
+                      Icon(Icons.chevron_right, color: colors.textTertiary),
                     ],
                   ),
                   if (total > 0) ...[
@@ -118,7 +129,7 @@ class _TaskListCard extends ConsumerWidget {
                                   ? Icons.check_box
                                   : Icons.check_box_outline_blank,
                               size: 16,
-                              color: item.isChecked ? Colors.green : Colors.grey,
+                              color: item.isChecked ? colors.accentSuccess : colors.textTertiary,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -130,7 +141,7 @@ class _TaskListCard extends ConsumerWidget {
                                   decoration:
                                       item.isChecked ? TextDecoration.lineThrough : null,
                                   color: item.isChecked
-                                      ? Colors.grey
+                                      ? colors.textTertiary
                                       : theme.colorScheme.onSurface,
                                 ),
                               ),
@@ -201,27 +212,10 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.checklist_outlined, size: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text(
-            AppLocalizations.of(context)!.noTaskListsYet,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            AppLocalizations.of(context)!.createFirstTaskList,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.shade500,
-            ),
-          ),
-        ],
-      ),
+    return EmptyStateWidget(
+      lottieAsset: 'assets/lottie/empty_tasks.json',
+      title: AppLocalizations.of(context)!.noTaskListsYet,
+      subtitle: AppLocalizations.of(context)!.createFirstTaskList,
     );
   }
 }
@@ -232,11 +226,12 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColors>()!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.error_outline, size: 48, color: Colors.grey.shade500),
+          Icon(Icons.error_outline, size: 48, color: colors.textSecondary),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: onRetry,

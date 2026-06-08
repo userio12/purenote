@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:purenote/core/database/database.dart';
+import 'package:purenote/core/theme/app_colors.dart';
+import 'package:purenote/core/theme/app_spacing.dart';
+import 'package:purenote/core/theme/app_shapes.dart';
 import 'package:purenote/core/utils/date_formatter.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
 import 'package:purenote/l10n/app_localizations.dart';
 
-
 class NoteCard extends StatelessWidget {
   final Note note;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final VoidCallback? onPin;
   final VoidCallback? onDelete;
   final List<Label>? labels;
@@ -17,169 +20,162 @@ class NoteCard extends StatelessWidget {
     super.key,
     required this.note,
     required this.onTap,
+    this.onLongPress,
     this.onPin,
     this.onDelete,
     this.labels,
     this.attachmentCount = 0,
   });
 
-  Color? _backgroundColor() {
-    if (note.color == null) return null;
-    return Color(note.color!);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final color = _backgroundColor();
     final theme = Theme.of(context);
+    final appColors = theme.extension<AppColors>()!;
     final preview = stripQuillDelta(note.content);
+    final hasContent = !note.isLocked && preview.isNotEmpty;
+    final hasLabels = labels != null && labels!.isNotEmpty;
 
-    return Card(
-      color: color?.withValues(alpha: 0.15) ?? theme.colorScheme.surfaceContainerHigh,
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Hero(
+      tag: 'note-color-${note.id}',
+      child: Card(
+        color: appColors.surfaceElevated,
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        child: InkWell(
+          borderRadius: AppShapes.md,
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Row(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      note.title.isEmpty ? AppLocalizations.of(context)!.untitled : note.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+              if (note.color != null)
+                Container(
+                  width: 4,
+                  decoration: BoxDecoration(
+                    color: Color(AppColors.noteColorValues[note.color! % 12]),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
                     ),
-                  ),
-                  if (note.isPinned)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4),
-                      child: Icon(Icons.push_pin, size: 16),
-                    ),
-                  if (note.isLocked)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 4),
-                      child: Icon(Icons.lock_outline, size: 16),
-                    ),
-                ],
-              ),
-              if (note.isLocked) ...[
-                const SizedBox(height: 6),
-                Text(
-                  AppLocalizations.of(context)!.lockedNote,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    fontStyle: FontStyle.italic,
                   ),
                 ),
-              ] else if (preview.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  preview,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-              if (labels != null && labels!.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 2,
-                  children: [
-                    for (final label in labels!.take(2))
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: label.color != null ? Color(label.color!).withValues(alpha: 0.15) : theme.colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(4),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              note.title.isEmpty
+                                  ? AppLocalizations.of(context)!.untitled
+                                  : note.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        if (note.isPinned)
+                          Padding(
+                            padding: const EdgeInsets.only(left: AppSpacing.xs),
+                            child: Icon(
+                              Icons.push_pin,
+                              size: 16,
+                              color: appColors.accentPrimary,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (hasContent)
+                      Text(
+                        preview,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: appColors.textSecondary,
                         ),
-                        child: Text(
-                          label.name,
+                      ),
+                    if (note.isLocked)
+                      Text(
+                        AppLocalizations.of(context)!.lockedNote,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: appColors.textTertiary,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    if (hasLabels) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: [
+                          for (final label in labels!.take(3))
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: appColors.accentPrimaryLight
+                                    .withValues(alpha: 0.2),
+                                borderRadius: AppShapes.full,
+                              ),
+                              child: Text(
+                                label.name,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: appColors.accentPrimary,
+                                ),
+                              ),
+                            ),
+                          if (labels!.length > 3)
+                            Text(
+                              '+${labels!.length - 3}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: appColors.textTertiary,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        Text(
+                          DateFormatter.formatRelative(note.updatedAt),
                           style: theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 11,
-                            color: label.color != null ? Color(label.color!) : null,
+                            color: appColors.textTertiary,
                           ),
                         ),
-                      ),
-                    if (labels!.length > 2)
-                      Text(
-                        '+${labels!.length - 2}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
+                        const Spacer(),
+                        if (attachmentCount > 0) ...[
+                          Icon(
+                            Icons.attach_file,
+                            size: 14,
+                            color: appColors.textTertiary,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '$attachmentCount',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: appColors.textTertiary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
-              ],
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(
-                    _formatDate(note.updatedAt),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  if (attachmentCount > 0) ...[
-                    const SizedBox(width: 8),
-                    Icon(Icons.attach_file, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
-                    const SizedBox(width: 2),
-                    Text(
-                      '$attachmentCount',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                      ),
-                    ),
-                  ],
-                  const Spacer(),
-                  if (onDelete != null)
-                    InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: onDelete,
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.delete_outline,
-                          size: 18,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ),
-                  if (onPin != null)
-                    InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: onPin,
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(
-                          note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                          size: 18,
-                          color: note.isPinned
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ),
-                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+    ),
     );
   }
-
-  String _formatDate(int epochMs) => DateFormatter.formatRelative(epochMs);
 }
 
 class NoteCardSkeleton extends StatelessWidget {
@@ -188,10 +184,12 @@ class NoteCardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appColors = theme.extension<AppColors>()!;
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      color: appColors.surfaceElevated,
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -199,25 +197,25 @@ class NoteCardSkeleton extends StatelessWidget {
               width: 160,
               height: 16,
               decoration: BoxDecoration(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                color: appColors.textTertiary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Container(
               width: double.infinity,
               height: 12,
               decoration: BoxDecoration(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                color: appColors.textTertiary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Container(
               width: 200,
               height: 12,
               decoration: BoxDecoration(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                color: appColors.textTertiary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),

@@ -16,14 +16,16 @@ void main() {
   });
 
   group('AppColors.noteColor', () {
-    test('returns Color for a non-null int value', () {
-      final color = AppColors.noteColor(0xFFEF5350);
+    test('returns Color for a valid index', () {
+      final color = AppColors.noteColor(0);
       expect(color, isA<Color>());
-      expect(color!.toARGB32(), 0xFFEF5350);
+      expect(color.toARGB32(), AppColors.noteColorValues[0]);
     });
 
-    test('returns null for null input', () {
-      expect(AppColors.noteColor(null), isNull);
+    test('returns Color for last index', () {
+      final color = AppColors.noteColor(11);
+      expect(color, isA<Color>());
+      expect(color.toARGB32(), AppColors.noteColorValues[11]);
     });
   });
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/l10n/app_localizations.dart';
 import 'package:purenote/widgets/app_scaffold.dart';
 
@@ -13,6 +14,7 @@ Widget _wrap(Widget w) => MaterialApp.router(
     GlobalCupertinoLocalizations.delegate,
   ],
   supportedLocales: const [Locale('en')],
+  theme: ThemeData(extensions: [AppColors.dark()]),
   routerConfig: GoRouter(
     initialLocation: '/',
     routes: [

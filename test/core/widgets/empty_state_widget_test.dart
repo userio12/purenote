@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/core/widgets/empty_state_widget.dart';
 
-Widget _wrap(Widget w) => MaterialApp(home: Scaffold(body: w));
+Widget _wrap(Widget w) => MaterialApp(
+  theme: ThemeData(extensions: [AppColors.dark()]),
+  home: Scaffold(body: w),
+);
 
 void main() {
   group('EmptyStateWidget', () {

@@ -8,7 +8,11 @@ part 'theme_provider.g.dart';
 @Riverpod(keepAlive: true)
 ThemeData appTheme(AppThemeRef ref) {
   final settings = ref.watch(settingsNotifierProvider);
-  return settings.themeMode == ThemeMode.dark
-      ? AppTheme.dark()
-      : AppTheme.light();
+  return switch (settings.themeMode) {
+    ThemeMode.dark => AppTheme.dark(),
+    ThemeMode.light => AppTheme.light(),
+    ThemeMode.system => WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark
+        ? AppTheme.dark()
+        : AppTheme.light(),
+  };
 }

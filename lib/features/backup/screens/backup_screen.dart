@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:purenote/core/services/backup_service.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/providers/settings_provider.dart';
 import 'package:purenote/features/backup/providers/backup_provider.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/l10n/app_localizations.dart';
 
 class BackupScreen extends ConsumerStatefulWidget {
@@ -255,6 +257,7 @@ class _BackupHistory extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(backupHistoryProvider);
     final theme = Theme.of(context);
+    final colors = Theme.of(context).extension<AppColors>()!;
 
     return historyAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -274,17 +277,21 @@ class _BackupHistory extends ConsumerWidget {
           );
         }
         return Column(
-          children: logs.map((log) => ListTile(
-            dense: true,
-            leading: Icon(
-              log.status == 0 ? Icons.check_circle_outline : Icons.error_outline,
-              color: log.status == 0 ? Colors.green : Colors.red,
-            ),
-            title: Text('Backup ${_formatEpoch(log.timestamp)}'),
-            subtitle: log.fileSize != null
-                ? Text('${(log.fileSize! / 1024).toStringAsFixed(1)} KB')
-                : null,
-          )).toList(),
+          children: logs.asMap().entries.map((entry) {
+            final index = entry.key;
+            final log = entry.value;
+            return ListTile(
+              dense: true,
+              leading: Icon(
+                log.status == 0 ? Icons.check_circle_outline : Icons.error_outline,
+                color: log.status == 0 ? colors.accentSuccess : colors.accentDanger,
+              ),
+              title: Text('Backup ${_formatEpoch(log.timestamp)}'),
+              subtitle: log.fileSize != null
+                  ? Text('${(log.fileSize! / 1024).toStringAsFixed(1)} KB')
+                  : null,
+            ).animate(delay: (index * 50).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, duration: 300.ms);
+          }).toList(),
         );
       },
     );

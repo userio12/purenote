@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:purenote/core/database/database.dart';
+import 'package:purenote/core/theme/app_colors.dart';
+import 'package:purenote/core/theme/app_spacing.dart';
+import 'package:purenote/core/theme/app_shapes.dart';
 import 'package:purenote/core/utils/date_formatter.dart';
 import 'package:purenote/core/utils/delta_utils.dart';
 import 'package:purenote/l10n/app_localizations.dart';
@@ -26,36 +30,59 @@ class NoteTile extends StatelessWidget {
     this.isSelected = false,
   });
 
-  Color? _backgroundColor() {
-    if (note.color == null) return null;
-    return Color(note.color!);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final color = _backgroundColor();
     final theme = Theme.of(context);
+    final appColors = theme.extension<AppColors>()!;
     final preview = note.isLocked ? '' : stripQuillDelta(note.content);
+    final hasContent = preview.isNotEmpty;
 
-    return Card(
+    final tile = Card(
       color: isSelected
-          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-          : color?.withValues(alpha: 0.15) ?? theme.colorScheme.surfaceContainerHigh,
-      margin: const EdgeInsets.only(bottom: 6),
+          ? appColors.accentPrimary.withValues(alpha: 0.1)
+          : appColors.surfaceElevated,
+      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppShapes.md,
         onTap: onTap,
         onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              if (isSelected)
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: Icon(Icons.check_circle, color: theme.colorScheme.primary, size: 22),
+        child: Row(
+          children: [
+            if (note.color != null)
+              Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? appColors.accentPrimary
+                      : Color(AppColors.noteColorValues[note.color! % 12]),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    bottomLeft: Radius.circular(12),
+                  ),
                 ),
-              Expanded(
+              ),
+            if (note.color == null && isSelected)
+              Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: appColors.accentPrimary,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    bottomLeft: Radius.circular(12),
+                  ),
+                ),
+              ),
+            if (isSelected)
+              Padding(
+                padding: const EdgeInsets.only(left: AppSpacing.md),
+                child: Icon(Icons.check_circle, color: appColors.accentPrimary, size: 22),
+              ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -63,80 +90,103 @@ class NoteTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            note.title.isEmpty ? AppLocalizations.of(context)!.untitled : note.title,
+                            note.title.isEmpty
+                                ? AppLocalizations.of(context)!.untitled
+                                : note.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                         if (note.isPinned)
                           Padding(
-                            padding: const EdgeInsets.only(left: 4),
-                            child: Icon(Icons.push_pin, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                            padding: const EdgeInsets.only(left: AppSpacing.xs),
+                            child: Icon(
+                              Icons.push_pin,
+                              size: 14,
+                              color: appColors.accentPrimary,
+                            ),
                           ),
                         if (note.isLocked)
                           Padding(
-                            padding: const EdgeInsets.only(left: 4),
-                            child: Icon(Icons.lock_outline, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                            padding: const EdgeInsets.only(left: AppSpacing.xs),
+                            child: Icon(
+                              Icons.lock_outline,
+                              size: 14,
+                              color: appColors.textTertiary,
+                            ),
                           ),
                       ],
                     ),
-                    if (!note.isLocked && preview.isNotEmpty)
+                    if (!note.isLocked && hasContent)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: AppSpacing.xs),
                         child: Text(
                           preview,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: appColors.textSecondary,
                           ),
                         ),
                       ),
                     if (note.isLocked)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.only(top: AppSpacing.xs),
                         child: Text(
                           AppLocalizations.of(context)!.lockedNote,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                            color: appColors.textTertiary,
                             fontStyle: FontStyle.italic,
                           ),
                         ),
                       ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     Row(
                       children: [
                         Text(
-                          _formatDate(note.updatedAt),
+                          DateFormatter.formatRelative(note.updatedAt),
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                            color: appColors.textTertiary,
                           ),
                         ),
                         if (attachmentCount > 0) ...[
-                          const SizedBox(width: 6),
-                          Icon(Icons.attach_file, size: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
-                          const SizedBox(width: 1),
+                          const SizedBox(width: AppSpacing.sm),
+                          Icon(
+                            Icons.attach_file,
+                            size: 12,
+                            color: appColors.textTertiary,
+                          ),
+                          const SizedBox(width: 2),
                           Text(
                             '$attachmentCount',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                              color: appColors.textTertiary,
                             ),
                           ),
                         ],
                         if (labels != null && labels!.isNotEmpty) ...[
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
                           ...labels!.take(2).map((l) => Padding(
-                            padding: const EdgeInsets.only(right: 4),
+                            padding: const EdgeInsets.only(right: AppSpacing.xs),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: l.color != null ? Color(l.color!).withValues(alpha: 0.15) : theme.colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(3),
+                                color: appColors.accentPrimaryLight
+                                    .withValues(alpha: 0.2),
+                                borderRadius: AppShapes.full,
                               ),
                               child: Text(
                                 l.name,
-                                style: theme.textTheme.labelSmall?.copyWith(fontSize: 10),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 10,
+                                  color: appColors.accentPrimary,
+                                ),
                               ),
                             ),
                           )),
@@ -144,7 +194,7 @@ class NoteTile extends StatelessWidget {
                             Text(
                               '+${labels!.length - 2}',
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                                color: appColors.textTertiary,
                                 fontSize: 10,
                               ),
                             ),
@@ -154,30 +204,62 @@ class NoteTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (onDelete != null)
-                IconButton(
-                  icon: Icon(Icons.delete_outline, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
-                  onPressed: onDelete,
-                  tooltip: AppLocalizations.of(context)!.delete,
+            ),
+            if (onDelete != null)
+              IconButton(
+                icon: Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: appColors.textTertiary,
                 ),
-              if (onPin != null)
-                IconButton(
-                  icon: Icon(
-                    note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                    size: 18,
-                    color: note.isPinned
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                  ),
-                  onPressed: onPin,
-                  tooltip: note.isPinned ? AppLocalizations.of(context)!.unpin : AppLocalizations.of(context)!.pin,
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  onDelete!();
+                },
+                tooltip: AppLocalizations.of(context)!.delete,
+              ),
+            if (onPin != null)
+              IconButton(
+                icon: Icon(
+                  note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                  size: 18,
+                  color: note.isPinned
+                      ? appColors.accentPrimary
+                      : appColors.textTertiary,
                 ),
-            ],
-          ),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  onPin!();
+                },
+                tooltip: note.isPinned
+                    ? AppLocalizations.of(context)!.unpin
+                    : AppLocalizations.of(context)!.pin,
+              ),
+          ],
         ),
       ),
     );
-  }
 
-  String _formatDate(int epochMs) => DateFormatter.formatRelative(epochMs);
+    if (onDelete == null) return tile;
+
+    return Dismissible(
+      key: ValueKey(note.id),
+      direction: onDelete != null ? DismissDirection.endToStart : DismissDirection.none,
+      confirmDismiss: (_) async {
+        onDelete?.call();
+        return false;
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: AppSpacing.xl),
+        margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+        decoration: BoxDecoration(
+          color: appColors.accentDanger,
+          borderRadius: AppShapes.md,
+        ),
+        child: Icon(Icons.delete_outline, color: appColors.surfaceElevated),
+      ),
+      child: tile,
+    );
+  }
 }

@@ -12,6 +12,7 @@ import 'package:purenote/core/error/result.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/services/attachment_service.dart';
 import 'package:purenote/features/audio/widgets/audio_player_widget.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/l10n/app_localizations.dart';
 
 class AudioRecorderScreen extends ConsumerStatefulWidget {
@@ -192,6 +193,7 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> with 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = Theme.of(context).extension<AppColors>()!;
 
     return Scaffold(
       appBar: AppBar(
@@ -212,7 +214,7 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> with 
             Icon(
               _isRecording ? Icons.mic : Icons.mic_none,
               size: 80,
-              color: _isRecording ? Colors.red : theme.colorScheme.primary,
+              color: _isRecording ? colors.accentDanger : theme.colorScheme.primary,
             ),
             const SizedBox(height: 24),
             Text(
@@ -244,7 +246,7 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> with 
                 if (_isRecording && !_isPaused)
                   FloatingActionButton.large(
                     onPressed: _pauseRecording,
-                    backgroundColor: Colors.orange,
+                    backgroundColor: colors.accentWarm,
                     child: const Icon(Icons.pause),
                   ),
                 if (_isRecording && _isPaused)
@@ -276,10 +278,10 @@ class _AudioRecorderScreenState extends ConsumerState<AudioRecorderScreen> with 
               const SizedBox(height: 24),
               TextButton.icon(
                 onPressed: _isRecording ? _stopRecording : _discard,
-                icon: const Icon(Icons.stop, color: Colors.red),
+                icon: Icon(Icons.stop, color: colors.accentDanger),
                 label: Text(
                   _isRecording ? AppLocalizations.of(context)!.stop : AppLocalizations.of(context)!.discard,
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: colors.accentDanger),
                 ),
               ),
             ],

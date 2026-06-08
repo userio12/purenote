@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:purenote/core/database/database.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 import 'package:purenote/features/labels/widgets/label_chip.dart';
 
-Widget _wrap(Widget w) => MaterialApp(home: Scaffold(body: Center(child: w)));
+Widget _wrap(Widget w) => MaterialApp(
+  theme: ThemeData(extensions: [AppColors.dark()]),
+  home: Scaffold(body: Center(child: w)),
+);
 
 void main() {
   group('LabelChip', () {

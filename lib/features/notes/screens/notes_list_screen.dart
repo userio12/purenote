@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purenote/core/database/database.dart';
@@ -8,11 +9,13 @@ import 'package:purenote/core/database/note_type.dart';
 import 'package:purenote/core/providers/database_provider.dart';
 import 'package:purenote/core/providers/settings_provider.dart';
 import 'package:purenote/core/services/notification_service.dart';
+import 'package:purenote/core/widgets/empty_state_widget.dart';
 import 'package:purenote/features/notes/providers/notes_provider.dart';
 import 'package:purenote/features/notes/widgets/note_card.dart';
 import 'package:purenote/features/notes/widgets/note_tile.dart';
 import 'package:purenote/features/labels/widgets/label_picker_sheet.dart';
 import 'package:purenote/l10n/app_localizations.dart';
+import 'package:purenote/core/theme/app_colors.dart';
 
 final _selectedIdsProvider = StateProvider<Set<String>>((_) => {});
 
@@ -284,7 +287,10 @@ class _NotesListScreenState extends ConsumerState<NotesListScreen> {
       ),
       floatingActionButton: !isSelectionMode
           ? FloatingActionButton(
-              onPressed: () => context.push('/note/new'),
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                context.push('/note/new');
+              },
               tooltip: AppLocalizations.of(context)!.newNote,
               child: const Icon(Icons.add),
             )
@@ -428,7 +434,7 @@ class _ListNotesView extends StatelessWidget {
             onDelete: () => onDelete(note),
             isSelected: selectedIds.contains(note.id),
           ),
-        );
+        ).animate(delay: (index * 50).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, duration: 300.ms);
       },
     );
   }
@@ -473,7 +479,7 @@ class _GridNotesView extends StatelessWidget {
           onTap: () => onTap(note),
           onPin: () => onPin(note),
           onDelete: () => onDelete(note),
-        );
+        ).animate(delay: (index * 50).ms).fadeIn(duration: 300.ms).slideY(begin: 0.05, duration: 300.ms);
       },
     );
   }
@@ -485,31 +491,11 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            hasFilter ? Icons.filter_list_off : Icons.note_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            hasFilter ? AppLocalizations.of(context)!.noMatchingNotes : AppLocalizations.of(context)!.noNotesYet,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            hasFilter ? AppLocalizations.of(context)!.tryDifferentFilter : AppLocalizations.of(context)!.tapToCreateFirstNote,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.shade500,
-            ),
-          ),
-        ],
-      ),
+    return EmptyStateWidget(
+      lottieAsset: hasFilter ? null : 'assets/lottie/empty_notes.json',
+      icon: hasFilter ? Icons.filter_list_off : null,
+      title: hasFilter ? AppLocalizations.of(context)!.noMatchingNotes : AppLocalizations.of(context)!.noNotesYet,
+      subtitle: hasFilter ? AppLocalizations.of(context)!.tryDifferentFilter : AppLocalizations.of(context)!.tapToCreateFirstNote,
     );
   }
 }
@@ -520,16 +506,17 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColors>()!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.error_outline, size: 48, color: Colors.grey.shade500),
+          Icon(Icons.error_outline, size: 48, color: colors.textSecondary),
           const SizedBox(height: 16),
           Text(
             AppLocalizations.of(context)!.couldNotLoadNotes,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.grey.shade600,
+              color: colors.textSecondary,
             ),
           ),
           const SizedBox(height: 12),
