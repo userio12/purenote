@@ -79,6 +79,7 @@ void main() {
         Label(id: 'l1', name: 'A', color: null, orderIndex: 0),
         Label(id: 'l2', name: 'B', color: null, orderIndex: 1),
         Label(id: 'l3', name: 'C', color: null, orderIndex: 2),
+        Label(id: 'l4', name: 'D', color: null, orderIndex: 3),
       ];
       await tester.pumpWidget(_wrap(NoteCard(note: _baseNote, onTap: () {}, labels: labels)));
       expect(find.text('+1'), findsOneWidget);

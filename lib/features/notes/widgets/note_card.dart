@@ -98,7 +98,13 @@ class NoteCard extends StatelessWidget {
                           color: appColors.textSecondary,
                         ),
                       ),
-                    if (note.isLocked)
+                    if (note.isLocked) ...[
+                      Icon(
+                        Icons.lock_outline,
+                        size: 16,
+                        color: appColors.textTertiary,
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
                       Text(
                         AppLocalizations.of(context)!.lockedNote,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -106,6 +112,7 @@ class NoteCard extends StatelessWidget {
                           fontStyle: FontStyle.italic,
                         ),
                       ),
+                    ],
                     if (hasLabels) ...[
                       const SizedBox(height: AppSpacing.md),
                       Wrap(
